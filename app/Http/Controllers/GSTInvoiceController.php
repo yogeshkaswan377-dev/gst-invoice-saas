@@ -43,6 +43,30 @@ class GSTInvoiceController extends Controller
     {
         $companyId = Auth::user()->current_company_id;
 
+        // Handle manual client creation
+        if ($request->client_mode === 'manual') {
+            $client = Client::create([
+                'company_id' => $companyId,
+                'client_type' => $request->manual_client_gstin ? 'business' : 'individual',
+                'name' => $request->manual_client_name,
+                'company_name' => $request->manual_client_company,
+                'gstin' => $request->manual_client_gstin,
+                'email' => $request->manual_client_email,
+                'phone' => $request->manual_client_phone,
+                'address_line_1' => $request->manual_client_address,
+                'state_code' => $request->manual_client_state_code,
+                'state_name' => $request->manual_client_state_name ?? '',
+                'pincode' => $request->manual_client_pincode,
+                'state' => $request->manual_client_state_name ?? '',
+                'country' => 'India',
+                'status' => 'active',
+            ]);
+
+            $clientId = $client->id;
+        } else {
+            $clientId = (int) $request->client_id;
+        }
+
         $items = collect($request->items)->map(function ($item) {
             return new InvoiceItemData(
                 name: $item['name'],
@@ -57,7 +81,7 @@ class GSTInvoiceController extends Controller
 
         $invoiceData = new InvoiceData(
             company_id: $companyId,
-            client_id: (int) $request->client_id,
+            client_id: $clientId,
             created_by: Auth::id(),
             invoice_type: 'gst_invoice',
             gst_mode: $request->gst_mode ?? 'exclusive',

@@ -39,65 +39,28 @@
         .header {
             display: table;
             width: 100%;
-            border-bottom: 2px solid #000;
-            padding-bottom: 14px;
-            margin-bottom: 16px;
+            table-layout: fixed;
         }
 
         .header .logo-cell {
-            display: table-cell;
-            width: 140px;
-            vertical-align: middle;
+            width: 200px;
         }
 
         .header .logo-img {
+            height: 120px;
             width: auto;
-            height: auto;
-
             max-width: 100%;
-            max-height: 80px;
-
             object-fit: contain;
         }
 
         .header .company-cell {
             display: table-cell;
+
             vertical-align: middle;
-            text-align: center;
-        }
-
-        .header .company-cell h1 {
-            font-size: 22px;
-            font-weight: 900;
-            color: #000;
-
-            text-transform: uppercase;
-
-            letter-spacing: 2px;
-
-            margin: 0 0 4px 0;
 
             text-align: center;
-        }
 
-        .header .company-cell p {
-            margin: 1px 0;
-
-            font-size: 10px;
-
-            color: #000;
-
-            text-align: center;
-        }
-
-        .header .company-cell .gstin {
-            font-weight: 700;
-
-            font-size: 11px;
-
-            margin-top: 4px;
-
-            text-align: center;
+            width: 100%;
         }
 
         .title-bar {
@@ -120,61 +83,82 @@
             display: table;
             width: 100%;
             border: 1px solid #000;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
+            table-layout: fixed;
         }
 
         .invoice-info .left,
         .invoice-info .right {
             display: table-cell;
-            width: 50%;
             vertical-align: top;
-            padding: 12px;
+            padding: 8px;
         }
 
         .invoice-info .left {
+            width: 40%;
             border-right: 1px solid #000;
         }
 
-        .invoice-info h4 {
-            font-size: 10px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
-            margin-bottom: 8px;
+        .invoice-info .right {
+            width: 60%;
+        }
+
+        .invoice-info .left .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 9px;
+            line-height: 1;
+        }
+
+        .invoice-info .left h4 {
+            font-size: 9px;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
         }
 
         .info-row {
             display: flex;
-
             justify-content: space-between;
-
-            margin-bottom: 8px;
-
-            font-size: 12px;
+            margin-bottom: 2px;
+            font-size: 10px;
         }
 
         .info-row span:first-child {
             font-weight: 700;
         }
 
+        .invoice-info .right {
+            line-height: 1.1;
+        }
+
+        .invoice-info .right h4 {
+            margin-bottom: 5px;
+        }
+
         .recipient-name {
-            font-size: 15px;
+            font-size: 16px;
+            /* bada sirf client name */
             font-weight: 700;
-            margin-bottom: 6px;
+            margin-bottom: 2px;
+            line-height: 1;
+        }
+
+        .recipient-details {
+            font-size: 11px;
+            line-height: 1.1;
+        }
+
+        .recipient-phone {
+            margin-top: 2px;
+            font-size: 11px;
+            line-height: 1;
         }
 
         .gstin-tag {
-            display: inline-block;
-
-            margin-top: 6px;
-
-            border: none;
-
-            padding: 2px 0;
-
+            margin-top: 2px;
             font-size: 11px;
-
-            font-weight: 700;
+            line-height: 1;
         }
 
         .items-table {
@@ -213,16 +197,21 @@
             text-align: right !important;
         }
 
-        /* ── TOTALS RIGHT ALIGNED ── */
+        /* TOTALS */
+
         .totals-wrapper {
             text-align: right;
-            margin-bottom: 16px;
+            margin: 10px 0 12px;
         }
 
         .totals-section {
             display: inline-block;
-            width: 320px;
-            text-align: left;
+
+            width: 290px;
+
+            border-top: none;
+
+            padding-top: 6px;
         }
 
         .totals-table {
@@ -231,39 +220,67 @@
         }
 
         .totals-table td {
-            padding: 4px 8px;
-            font-size: 10px;
+            padding: 4px 4px;
+
+            font-size: 9px;
+
+            line-height: 1.2;
         }
 
         .totals-table td:first-child {
             text-align: right;
-            font-weight: 500;
+
+            color: #333;
         }
 
         .totals-table td:last-child {
             text-align: right;
-            font-weight: 600;
-            width: 110px;
+
+            font-weight: 700;
+
+            width: 120px;
         }
 
         .totals-table .grand-row td {
-            border: none;
+            border-top: 2px solid #000;
+
+            padding-top: 6px;
 
             font-size: 12px;
 
             font-weight: 900;
-
-            padding: 6px 8px;
         }
+
+
+
+        /* AMOUNT IN WORDS */
 
         .amount-words {
             border: 1px solid #000;
-            border-left: 4px solid #000;
-            padding: 8px 14px;
-            margin-bottom: 16px;
+
+            border-left: 5px solid #000;
+
+            padding: 8px 12px;
+
+            margin-top: 8px;
+
             font-size: 10px;
-            font-weight: 700;
-            font-style: italic;
+
+            line-height: 1.4;
+
+            font-style: normal;
+
+            font-weight: 500;
+        }
+
+        .amount-words strong {
+            display: block;
+
+            margin-bottom: 2px;
+
+            font-size: 9px;
+
+            text-transform: uppercase;
         }
 
         .alert-box {
@@ -390,16 +407,31 @@
                 </div>
                 <div class="right">
                     <h4>Recipient (Bill To)</h4>
-                    <div class="recipient-name">{{ $invoice->client->name ?? 'N/A' }}</div>
-                    <div style="font-size:15px;">
-                        @if($invoice->client->address_line_1){{ $invoice->client->address_line_1 }}<br>@endif
-                        {{ $invoice->client->city ?? '' }},{{ $invoice->client->state_name ?? $invoice->client->state ?? '' }} {{ $invoice->client->pincode ?? '' }}
+
+                    <div class="recipient-name">
+                        {{ $invoice->client->name ?? 'N/A' }}
                     </div>
+
+                    <div class="recipient-details">
+                        @if($invoice->client->address_line_1)
+                        {{ $invoice->client->address_line_1 }}<br>
+                        @endif
+
+                        {{ $invoice->client->city ?? '' }},
+                        {{ $invoice->client->state_name ?? $invoice->client->state ?? '' }}
+                        {{ $invoice->client->pincode ?? '' }}
+                    </div>
+
                     @if($invoice->client->phone)
-                    <div style="margin-top:05px;font-size:15px;">M: {{ $invoice->client->phone }}</div>
+                    <div class="recipient-phone">
+                        M: {{ $invoice->client->phone }}
+                    </div>
                     @endif
+
                     @if($invoice->client->gstin)
-                    <div class="gstin-tag">GSTIN: {{ $invoice->client->gstin }}</div>
+                    <div class="gstin-tag">
+                        GSTIN: {{ $invoice->client->gstin }}
+                    </div>
                     @endif
                 </div>
             </div>
@@ -413,9 +445,9 @@
                         <th style="width:10%;">HSN/SAC</th>
                         <th style="width:7%;">Qty</th>
                         <th style="width:7%;">Unit</th>
-                        <th style="width:12%;">Rate</th>
+                        <th style="width:12%;">Rate(Rs)</th>
                         <th style="width:7%;">GST%</th>
-                        <th style="width:14%;">Amount</th>
+                        <th style="width:14%;">Amount(Rs)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -430,7 +462,15 @@
                         <td>{{ $item->unit ?? 'Nos' }}</td>
                         <td class="text-right">{{ \App\Helpers\NumberToWords::indianFormat($item->unit_price) }}</td>
                         <td>{{ $item->gst_rate }}%</td>
-                        <td class="text-right">{{ \App\Helpers\NumberToWords::indianFormat($item->line_total ?? ($item->total_amount ?? $item->quantity * $item->unit_price)) }}</td>
+                        <td class="text-right">
+                            {{ \App\Helpers\NumberToWords::indianFormat(
+($item->line_total > 0
+    ? $item->line_total
+    : ($item->total_amount > 0
+        ? $item->total_amount
+        : ($item->quantity * $item->unit_price)))
+) }}
+                        </td>
                     </tr>
                     @endforeach
                     @if($invoice->items->count() > 1)
@@ -507,12 +547,6 @@
             <div class="amount-words">
                 Amount in Words: {{ ucwords(\App\Helpers\NumberToWords::convert($invoice->grand_total)) }} Only
             </div>
-
-            @if($invoice->reverse_charge)
-            <div class="alert-box">
-                Reverse Charge Mechanism: Tax payable by recipient under Section 9(3) of CGST Act, 2017.
-            </div>
-            @endif
 
             <div class="bottom-section">
                 <div class="bottom-left">

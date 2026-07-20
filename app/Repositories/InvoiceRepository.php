@@ -81,11 +81,14 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
     public function create(array $data): Invoice
     {
         return DB::transaction(function () use ($data) {
+            // Extract items from data; they don't belong to the invoices table
+            $items = $data['items'] ?? [];
+            unset($data['items']);
+
             $invoice = $this->model->create($data);
 
-            // Create items if provided
-            if (!empty($data['items'])) {
-                foreach ($data['items'] as $index => $item) {
+            if (!empty($items)) {
+                foreach ($items as $index => $item) {
                     $item['sort_order'] = $index + 1;
                     $invoice->items()->create($item);
                 }
