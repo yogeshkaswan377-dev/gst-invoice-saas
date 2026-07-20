@@ -103,6 +103,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['company.selected'])
         ->name('products.')
         ->group(function () {
+            // Product search (AJAX) – used by invoice builder
+            Route::get('/search', [ProductController::class, 'search'])->name('search');
+            // Product stock info (AJAX) – returns stock/deduction details
+            Route::get('/{product}/stock-info', [ProductController::class, 'stockInfo'])->name('stock-info');
             Route::get('/', [ProductController::class, 'index'])->name('index');
             Route::get('/create', [ProductController::class, 'create'])->name('create');
             Route::post('/', [ProductController::class, 'store'])->name('store');
@@ -110,6 +114,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('edit');
             Route::put('/{product}', [ProductController::class, 'update'])->name('update');
             Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
+
+            // New Routes
+            Route::post('/{product}/adjust-stock', [ProductController::class, 'adjustStock'])
+                ->name('adjust-stock');
+
+            Route::get('/{product}/stock-history', [ProductController::class, 'stockHistory'])
+                ->name('stock-history');
+
+            Route::get('/import', [ProductController::class, 'import'])
+                ->name('import');
+
+            Route::post('/import', [ProductController::class, 'processImport'])
+                ->name('import.process');
+
+            Route::get('/export', [ProductController::class, 'export'])
+                ->name('export');
         });
     // ============================================
     // PHASE 4A: PROFORMA INVOICES

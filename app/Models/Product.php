@@ -19,12 +19,22 @@ class Product extends Model
         'gst_rate',
         'unit',
         'is_active',
+        'stock',
+        'stock_unit',
+        'stock_deduction_type',
+        'consumption_per_piece',
+        'minimum_stock',
+        'selling_price',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'gst_rate' => 'decimal:2',
         'is_active' => 'boolean',
+        'stock' => 'decimal:2',
+        'consumption_per_piece' => 'decimal:2',
+        'minimum_stock' => 'decimal:2',
+        'selling_price' => 'decimal:2',
     ];
 
     /**
@@ -33,6 +43,11 @@ class Product extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function stockHistories()
+    {
+        return $this->hasMany(StockHistory::class);
     }
 
     /**

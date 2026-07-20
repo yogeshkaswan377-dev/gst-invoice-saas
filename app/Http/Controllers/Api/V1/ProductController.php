@@ -7,6 +7,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -92,21 +93,32 @@ class ProductController extends Controller
         ]);
     }
 
-    public function search(Request $request): JsonResponse
+    public function search(Request $request)
     {
-        $query = $request->get('q');
+        $companyId = Auth::user()->current_company_id;
 
-        $products = Product::where('company_id', session('current_company_id'))
+        $query = $request->get('q'); // the search term
+        $products = Product::where('company_id', $companyId)
+            ->where('is_active', true)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'LIKE', "%{$query}%")
                     ->orWhere('hsn_sac_code', 'LIKE', "%{$query}%");
             })
-            ->limit(20)
-            ->get();
+            ->limit(10)
+            ->get(['id', 'name', 'hsn_sac_code', 'unit_price', 'gst_rate']);
 
+        return response()->json($products);
+    }
+
+    public function stockInfo(Product $product)
+    {
         return response()->json([
-            'success' => true,
-            'data' => ProductResource::collection($products),
+            'id' => $product->id,
+            'name' => $product->name,
+            'stock' => $product->stock,
+            'stock_unit' => $product->stock_unit,
+            'stock_deduction_type' => $product->stock_deduction_type,
+            'consumption_per_piece' => $product->consumption_per_piece,
         ]);
     }
 }

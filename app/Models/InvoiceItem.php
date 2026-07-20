@@ -18,6 +18,7 @@ class InvoiceItem extends Model
         'description',
         'hsn_sac_code',
         'quantity',
+        'consumed_stock',
         'unit',
         'unit_price',
         'original_unit_price',
@@ -35,7 +36,8 @@ class InvoiceItem extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'decimal:2',  
+        'consumed_stock' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'original_unit_price' => 'decimal:2',
         'discount_value' => 'decimal:2',

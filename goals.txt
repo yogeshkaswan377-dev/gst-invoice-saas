@@ -1,0 +1,254 @@
+The new feature introduces an **inventory/stock management layer** that integrates with the existing Proforma & GST Invoice system. Below is a detailed technical analysis covering impact, design, and implementation roadmap.
+
+---
+
+## 1. Core Concept & Fit into Existing Architecture
+
+The feature adds a **product catalog with stock tracking** and **automatic stock deduction** during invoice creation/edit/deletion, based on a product's **sale/deduction type**.  
+Currently, the project has:
+
+- Clients, Companies, Invoices (Proforma & GST), basic services, repositories, DTOs.
+- No product master, no stock, no inventory movements.
+
+This addition will touch nearly all layers: database, models, repositories, services, controllers, forms, and views.
+
+The user also wisely proposes a **flexible `stock_deduction_type`** instead of just Meter/Piece. That future‑proofs the system for Kg, Roll, Box, etc. We’ll adopt this approach.
+
+---
+
+## 2. Required Database Changes
+
+### 2.1 New Tables
+
+#### `products`
+```sql
+id (pk)
+company_id (fk → companies)
+item_no (unique per company, varchar)
+fabric_title (varchar)        -- "fabric" can be renamed to "name" for generic use
+description (text, nullable)
+stock (decimal(10,2), default 0)         -- always stored in a base unit (e.g., Meter)
+stock_unit (varchar, default 'Mtr')      -- display unit (Mtr, Kg, Roll...)
+sale_type (varchar)          -- renamed to stock_deduction_type in new design
+consumption_per_piece (decimal(10,2), nullable)  -- used when stock_deduction_type = piece
+minimum_stock (decimal(10,2), default 0)
+selling_price (decimal(10,2))
+gst_rate (decimal(5,2))      -- if needed per product, else use company default
+status (boolean, default true)
+timestamps
+```
+
+#### `stock_histories`
+```sql
+id (pk)
+company_id (fk → companies)
+product_id (fk → products)
+invoice_id (fk → invoices, nullable)   -- for invoice-related changes
+user_id (fk → users)                    -- who performed the action
+action (varchar)                        -- 'invoice_create', 'invoice_edit', 'invoice_delete', 'manual_add', 'manual_deduct', 'manual_set', 'csv_import'
+stock_deduction_type (varchar)         -- Meter, Piece, Kg...
+invoice_quantity (decimal(10,2), nullable) -- quantity on invoice (in invoice unit, e.g., Shirts)
+consumed_stock (decimal(10,2), nullable)  -- actual stock deducted (in stock unit, e.g., Meters)
+previous_stock (decimal(10,2))
+current_stock (decimal(10,2))
+reference_type (varchar, nullable)     -- 'invoice', 'manual', 'csv'
+reference_id (nullable unsigned big integer) -- polymorphic or explicit
+remarks (text, nullable)
+created_at
+```
+
+### 2.2 Modifications to Existing Tables
+
+- **`invoices` table**: Already has `items` JSON column storing line items. The existing item structure likely includes `product_id`, `name`, `quantity`, `price`, etc. We'll need to ensure it stores the **invoice quantity** (in the product’s sale unit, e.g., "3 Shirts" or "5 Meter") and the **deducted stock** (`consumed_stock`).  
+  Add a nullable `product_id` column if not already present in the items JSON.  
+  A new column `stock_deduction_type` may be added to the invoice itself, but it's better to pull it from the product per line item.  
+
+- **`invoice_items` table** (if separate table exists; spec earlier used JSON but might have a dedicated table). For robust relational queries, a dedicated `invoice_items` table is preferable. However, the existing code uses JSON. We'll need to be consistent.  
+
+Given the importance of stock deduction tracking, I recommend moving invoice items to a **relational `invoice_items` table** (migration: `id, invoice_id, product_id, product_name, quantity, unit, price, discount, tax_details, consumed_stock, stock_deduction_type`). This will make stock history lookups and adjustments far easier.
+
+- **`companies` table**: No direct change, but stock is company‑scoped.
+
+---
+
+## 3. Impact on Existing System Components
+
+### 3.1 Business Logic Layer (Services & Repositories)
+
+New services/repositories to create:
+
+- **`ProductRepository`** (implements `ProductRepositoryInterface`)
+- **`ProductService`** – handles CRUD, CSV import, stock adjustments.
+- **`StockService`** – pure business logic: calculate stock deduction (considering `stock_deduction_type`), validate stock availability, handle adjustments and history logging.
+- **`StockHistoryRepository`** (write‑only, append history).
+- **`InvoiceStockService`** – orchestrates stock changes on invoice create/edit/delete.
+
+Existing services that need modification:
+
+- **`InvoiceService`** (create, update, delete) must call `StockService` to validate and deduct/restore stock after invoice operations.  
+- **`InvoiceNumberGenerator`** – no change.  
+- **`GSTCalculationService`** – might need to use per‑product GST rate if product overrides.  
+- **`DTOs`**: `InvoiceData` must include product references and `consumed_stock` per item. New DTOs: `ProductData`, `StockAdjustmentData`.
+
+### 3.2 Controllers
+
+New controllers:
+
+- **`ProductController`** (web) – index, create, store, edit, update, destroy, importCSV, exportCSV, stockAdjust.
+- **`Api\ProductController`** – stubs for future Next.js frontend.
+
+Modifications to existing controllers:
+
+- **`InvoiceController`** (GST & Proforma) – after a successful `store()`, call `InvoiceStockService::deduct($invoice)`. After `update()`, call `InvoiceStockService::adjust($originalInvoice, $updatedInvoice)`. After `destroy()`, call `InvoiceStockService::restore($invoice)`.
+- Invoice creation form must fetch product list with live stock display (Alpine.js).  
+
+### 3.3 Views
+
+New Blade views:
+
+- `products/index.blade.php` – listing with search, filters, stock indicators, action buttons.
+- `products/create-edit.blade.php` – form with dynamic fields based on `stock_deduction_type`.
+- `products/import.blade.php` – CSV upload with import mode options.
+- `products/stock-history.blade.php` – history log for a product.
+
+Modified invoice views:
+
+- Invoice create/edit: product dropdown with search, real‑time stock display, consumption calculation (for piece types), stock validation errors.
+- Invoice show/PDF: may display consumed stock info.
+
+### 3.4 JavaScript Components
+
+- Alpine.js component for live stock display and consumption calculation on invoice form.
+- AJAX endpoint to fetch product details (stock, deduction_type, consumption_per_piece) when a product is selected.
+- CSV import with preview & validation (Alpine or vanilla JS).
+
+---
+
+## 4. Detailed Feature Analysis & Implementation Plan
+
+I’ll break the feature into incremental phases that align with your existing architecture.
+
+### Phase A – Product Master & Stock Adjustment (Backend Only)
+
+**Goal:** CRUD for products, stock adjustments (add/deduct/set), stock history logging.
+
+- Migration for `products` and `stock_histories`.
+- Models with relationships.
+- `ProductRepository`, `ProductService`, `StockService`, `StockHistoryRepository`.
+- DTOs.
+- Form Requests (`StoreProductRequest`, `UpdateProductRequest`, `StockAdjustmentRequest`).
+- Controller (thin, calls services).
+- API endpoints stubbed.
+- Tests.
+
+At this stage, no invoice integration. Stock is manually managed.
+
+### Phase B – CSV Import & Export
+
+- `ProductImportService`: parses CSV, validates rows, handles import modes (add new, update existing, replace stock, add stock).
+- Uses queue if file is large, but for MVP can be synchronous.
+- `ExportService` to download current product list as CSV.
+- Views and routes for import/export.
+
+### Phase C – Invoice Integration (Stock Deduction/Adjustment)
+
+- Modify `InvoiceService::create()` etc. to integrate stock logic.
+- Create `InvoiceStockService` with methods:
+  - `validateStockForInvoice($invoiceData)`: returns array of errors if insufficient.
+  - `deductStockForInvoice($invoice)`: deducts stock, records history.
+  - `adjustStockForInvoiceEdit($oldInvoice, $newInvoice)`: calculates difference, restores/adds stock.
+  - `restoreStockForInvoiceDelete($invoice)`: adds back stock.
+- Update invoice controllers to call validation before save and trigger stock changes after successful transaction (wrap in DB transaction).
+- Modify invoice line‑item handling to store `product_id` and `consumed_stock` persistently.
+
+### Phase D – Live Stock Display & Validation on Invoice Form
+
+- Alpine.js component: on product selection, fetch product data via AJAX (e.g., `/api/products/{id}/stock-info`). Display current stock, consumption rate, estimated deduction.
+- Client‑side validation before submission (optional, but helpful).
+- Server‑side validation in `InvoiceStockService::validateStockForInvoice()` returning error messages displayed next to product line.
+
+### Phase E – Invoice Edit & Delete with Stock Rollback
+
+- Ensure edit workflow adjusts stock correctly (using `adjustStockForInvoiceEdit`).
+- Confirm delete triggers stock restoration.
+- Audit all paths to prevent stock inconsistencies (use DB transactions).
+
+### Phase F – Stock History UI & Reporting
+
+- View history per product (filter by date, action).
+- Dashboard widgets: total stock, low stock alerts, daily consumption.
+
+---
+
+## 5. Architecture Decisions & Recommendations
+
+### 5.1 Stock Deduction Type Flexibility
+
+Adopt the user’s suggestion and store `stock_deduction_type` as a string with allowed values: `Meter`, `Piece`, `Kg`, `Roll`, `Box`, `Custom`.
+
+- In `StockService`, a strategy pattern or simple `match` will handle deduction logic:
+  - `Meter`, `Kg`, etc.: quantity directly deducted from stock (1 invoice unit = 1 stock unit).
+  - `Piece`, `Roll`, etc.: requires `consumption_per_piece` field; deduction = `quantity × consumption_per_piece`.
+  - `Custom`: could support a formula or manual entry.
+
+### 5.2 Stock as a Single Decimal Column
+
+All stock is stored in a base unit (e.g., Meter, Kg). The `stock_unit` column is for display only. This simplifies calculations. If a company uses multiple units (e.g., some products in Kg, some in Meters), that’s fine; calculations remain correct because we never convert across units.
+
+### 5.3 Invoice Items Relationship
+
+Existing system stores invoice items as JSON in an `items` column. While we can keep that, stock tracking becomes fragile because we’d need to parse JSON every time to fetch consumed stock. Migrating to a dedicated `invoice_items` table is strongly advised. It also enables proper reporting queries.
+
+**Migration path:**
+
+1. Create `invoice_items` table.
+2. Run a one‑time seeder/command to migrate existing JSON items into the new table.
+3. Update all invoice services and repositories to use the relational model.
+4. Keep the old JSON column for backward compatibility until fully transitioned.
+
+Given the multi‑phase nature of your project, this migration is a separate mini‑project but crucial for clean stock handling.
+
+### 5.4 Transaction Management
+
+Any operation affecting stock (invoice create/edit/delete, manual adjustment) must be wrapped in a database transaction with appropriate locks to prevent race conditions. In Laravel, use `DB::transaction()` and consider `lockForUpdate()` on the product row when deducting stock.
+
+---
+
+## 6. Potential Risks & Mitigation
+
+| Risk | Mitigation |
+|------|------------|
+| Stock inconsistency due to partial failures | Wrap invoice + stock operations in DB transactions. Rollback on failure. |
+| Concurrent stock updates | Use pessimistic row locking (`lockForUpdate()`) during deduction. |
+| Large CSV imports cause timeouts | Use Laravel queue jobs for processing imports; background job with progress updates. |
+| Changing invoice items table breaks existing functionality | Implement migration as a separate release with thorough testing and fallback. |
+| Complex consumption logic for future types | Use a factory or strategy pattern in `StockDeductionCalculator` to encapsulate per‑type logic. |
+
+---
+
+## 7. Suggested Implementation Sequence (Aligned with Current Status)
+
+Your current status shows the core GST invoice platform is functional (Phase 1‑4 essentially done). So you can start adding the inventory feature without re‑working existing phases.
+
+**Recommended order:**
+
+1. **Phase A** – Products CRUD & manual stock adjustments.  
+2. **Phase B** – CSV import/export.  
+3. **Phase C** – Invoice integration (stock deduction).  
+4. **Phase D** – Live stock display & validation on invoice form.  
+5. **Phase E** – Invoice edit/delete stock adjustments.  
+6. **Phase F** – History UI & Dashboard.
+
+If you want to keep momentum, combine Phase A and B, then C+D, then E+F. Since you’re using multiple AI sessions, you can hand off between these sub‑phases using the same coordination protocol.
+
+---
+
+## 8. Final Check Against User’s Specification
+
+All modules (1–9) are covered. The suggested `stock_deduction_type` expansion is incorporated. The dashboard widgets will be added in Phase F.
+
+The feature is fully compatible with the existing architecture: Business logic stays in services, repositories handle data, DTOs transfer data, and controllers remain thin.
+
+---
+
+Ready to proceed with the first implementation phase? I can provide complete code for **Phase A** (Product Master & Stock Backend) as a new handoff.

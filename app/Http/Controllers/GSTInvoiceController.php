@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use ZipArchive;
 use App\Mail\InvoiceMail;
 use Illuminate\Support\Facades\Mail;
+use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
 class GSTInvoiceController extends Controller
@@ -34,14 +35,40 @@ class GSTInvoiceController extends Controller
 
     public function create()
     {
-        $company = Company::find(Auth::user()->current_company_id);
-        $clients = Client::where('company_id', $company->id)->where('status', 'active')->get();
+        $companyId = Auth::user()->current_company_id;
+        $company = Company::find($companyId);
+        $clients = Client::where('company_id', $companyId)->where('status', 'active')->get();
+        // No $products
         return view('gst-invoices.create', compact('company', 'clients'));
     }
 
     public function store(StoreProformaRequest $request)
     {
         $companyId = Auth::user()->current_company_id;
+
+        // Handle manual client creation
+        if ($request->client_mode === 'manual') {
+            $client = Client::create([
+                'company_id' => $companyId,
+                'client_type' => $request->manual_client_gstin ? 'business' : 'individual',
+                'name' => $request->manual_client_name,
+                'company_name' => $request->manual_client_company,
+                'gstin' => $request->manual_client_gstin,
+                'email' => $request->manual_client_email,
+                'phone' => $request->manual_client_phone,
+                'address_line_1' => $request->manual_client_address,
+                'state_code' => $request->manual_client_state_code,
+                'state_name' => $request->manual_client_state_name ?? '',
+                'pincode' => $request->manual_client_pincode,
+                'state' => $request->manual_client_state_name ?? '',
+                'country' => 'India',
+                'status' => 'active',
+            ]);
+
+            $clientId = $client->id;
+        } else {
+            $clientId = (int) $request->client_id;
+        }
 
         $items = collect($request->items)->map(function ($item) {
             return new InvoiceItemData(
@@ -52,16 +79,16 @@ class GSTInvoiceController extends Controller
                 hsn_sac_code: $item['hsn_sac_code'] ?? null,
                 gst_rate: (float) ($item['gst_rate'] ?? 18.00),
                 taxable_amount: (float) ($item['unit_price'] * $item['quantity']),
+                productId: isset($item['product_id']) ? (int)$item['product_id'] : null,   // NEW
             );
         })->toArray();
 
         $invoiceData = new InvoiceData(
             company_id: $companyId,
-            client_id: (int) $request->client_id,
+            client_id: $clientId,
             created_by: Auth::id(),
             invoice_type: 'gst_invoice',
             gst_mode: $request->gst_mode ?? 'exclusive',
-            gst_rate: (float) ($request->gst_rate ?? 18.00),
             invoice_date: $request->invoice_date,
             due_date: $request->due_date,
             reference_number: $request->reference_number,
@@ -128,6 +155,7 @@ class GSTInvoiceController extends Controller
                 hsn_sac_code: $item['hsn_sac_code'] ?? null,
                 gst_rate: (float) ($item['gst_rate'] ?? 18.00),
                 taxable_amount: (float) ($item['unit_price'] * $item['quantity']),
+                productId: isset($item['product_id']) ? (int)$item['product_id'] : null,   // NEW
             );
         })->toArray();
 
@@ -137,7 +165,6 @@ class GSTInvoiceController extends Controller
             created_by: Auth::id(),
             invoice_type: 'gst_invoice',
             gst_mode: $request->gst_mode ?? 'exclusive',
-            gst_rate: (float) ($request->gst_rate ?? 18.00),
             invoice_date: $request->invoice_date,
             due_date: $request->due_date,
             reference_number: $request->reference_number,
@@ -164,20 +191,12 @@ class GSTInvoiceController extends Controller
     {
         $companyId = Auth::user()->current_company_id;
         $invoice = $this->gstInvoiceService->getInvoice($id, $companyId);
-
         if (!$invoice || !$invoice->isDeletable()) {
             return back()->with('error', 'Cannot delete this invoice.');
         }
-
-        Log::warning('GST Invoice deleted', [
-            'user_id' => Auth::id(),
-            'invoice_number' => $invoice->invoice_number,
-            'company_id' => $companyId,
-        ]);
-
-        $this->gstInvoiceService->deleteGSTInvoice($id);
-
         Gate::authorize('delete', $invoice);
+
+        $this->gstInvoiceService->deleteGSTInvoice($id);   // now handles stock
 
         return redirect()->route('gst-invoices.index')
             ->with('success', 'GST Invoice deleted.');

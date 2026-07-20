@@ -7,10 +7,13 @@ use App\DTOs\InvoiceTotals;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Services\GST\GSTCalculationService;
 use App\Services\GST\TaxBreakdownService;
+use App\Services\InvoiceStockService;
 use App\Services\NumberGenerator\InvoiceNumberGenerator;
+use Illuminate\Support\Facades\DB;
 
 class GSTInvoiceService
 {
@@ -18,7 +21,7 @@ class GSTInvoiceService
         private InvoiceRepositoryInterface $invoiceRepository,
         private TaxBreakdownService $taxBreakdownService,
         private InvoiceNumberGenerator $numberGenerator,
-        private GSTCalculationService $gstService
+        private InvoiceStockService $invoiceStockService
     ) {}
 
     /**
@@ -29,39 +32,73 @@ class GSTInvoiceService
         $totals = $this->calculateGSTTotals($data);
         $invoiceNumber = $this->numberGenerator->generateInvoiceNumber($data->company_id);
 
-        return $this->invoiceRepository->create([
-            'company_id' => $data->company_id,
-            'client_id' => $data->client_id,
-            'created_by' => $data->created_by,
-            'invoice_number' => $invoiceNumber,
-            'invoice_type' => 'gst_invoice',
-            'status' => $data->status ?? 'draft',
-            'reference_number' => $data->reference_number,
-            'invoice_date' => $data->invoice_date,
-            'due_date' => $data->due_date,
-            'gst_mode' => $data->gst_mode,
-            'gst_rate' => $data->gst_rate ?? 18.00,
-            'place_of_supply' => $this->getPlaceOfSupply($data->company_id, $data->client_id),
-            'place_of_supply_state_code' => Client::find($data->client_id)->state_code ?? null,
-            'reverse_charge' => $data->reverse_charge ?? false,
-            'subtotal' => $totals->subtotal,
-            'discount_type' => $data->discount_type,
-            'discount_amount' => $totals->discountAmount,
-            'taxable_amount' => $totals->taxableAmount,
-            'cgst_amount' => $totals->taxBreakdown?->cgstAmount ?? 0,
-            'sgst_amount' => $totals->taxBreakdown?->sgstAmount ?? 0,
-            'igst_amount' => $totals->taxBreakdown?->igstAmount ?? 0,
-            'total_gst_amount' => $totals->totalGst,
-            'shipping_charges' => $totals->shippingCharges,
-            'commission' => $totals->commission,
-            'grand_total' => $totals->grandTotal,
-            'balance_due' => $totals->grandTotal,
-            'notes' => $data->notes,
-            'terms_and_conditions' => $data->terms_and_conditions,
-            'payment_terms' => $data->payment_terms ?? 'Net 15',
-            'show_hsn_sac' => $data->show_hsn_sac ?? true,
-            'items' => array_map(fn($item) => $item->toArray(), $data->items),
-        ]);
+        $invoice = DB::transaction(function () use ($data, $totals, $invoiceNumber) {
+            // Create invoice record (without items JSON)
+            $invoice = Invoice::create([
+                'company_id' => $data->company_id,
+                'client_id' => $data->client_id,
+                'created_by' => $data->created_by,
+                'invoice_number' => $invoiceNumber,
+                'invoice_type' => 'gst_invoice',
+                'status' => $data->status ?? 'draft',
+                'reference_number' => $data->reference_number,
+                'invoice_date' => $data->invoice_date,
+                'due_date' => $data->due_date,
+                'gst_mode' => $data->gst_mode,
+                'gst_rate' => $data->gst_rate ?? 18.00,
+                'place_of_supply' => $this->getPlaceOfSupply($data->company_id, $data->client_id),
+                'place_of_supply_state_code' => Client::find($data->client_id)->state_code ?? null,
+                'reverse_charge' => $data->reverse_charge ?? false,
+                'subtotal' => $totals->subtotal,
+                'discount_type' => $data->discount_type,
+                'discount_amount' => $totals->discountAmount,
+                'taxable_amount' => $totals->taxableAmount,
+                'cgst_amount' => $totals->cgstAmount ?? 0,
+                'sgst_amount' => $totals->sgstAmount ?? 0,
+                'igst_amount' => $totals->igstAmount ?? 0,
+                'total_gst_amount' => $totals->totalGst,
+                'shipping_charges' => $totals->shippingCharges,
+                'commission' => $totals->commission,
+                'grand_total' => $totals->grandTotal,
+                'paid_amount' => 0,
+                'balance_due' => $totals->grandTotal,
+                'notes' => $data->notes,
+                'terms_and_conditions' => $data->terms_and_conditions,
+                'payment_terms' => $data->payment_terms ?? 'Net 15',
+            ]);
+
+            // Create invoice items
+            foreach ($data->items as $item) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'product_id' => $item->productId,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'hsn_sac_code' => $item->hsn_sac_code,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'gst_rate' => $item->gst_rate,
+                    'taxable_amount' => $item->taxable_amount,
+                    'cgst_amount' => 0,   // will be updated if needed, or set properly
+                    'sgst_amount' => 0,
+                    'igst_amount' => 0,
+                    'line_total' => $item->unit_price * $item->quantity,
+                ]);
+            }
+
+            // Validate stock
+            $stockErrors = $this->invoiceStockService->validateStock($invoice);
+            if (!empty($stockErrors)) {
+                throw new \Exception(implode(' ', $stockErrors));
+            }
+
+            // Deduct stock
+            $this->invoiceStockService->deductStock($invoice);
+
+            return $invoice;
+        });
+
+        return $invoice;
     }
 
     /**
@@ -69,38 +106,68 @@ class GSTInvoiceService
      */
     public function updateGSTInvoice(int $id, InvoiceData $data): Invoice
     {
+        $oldInvoice = Invoice::with('items')->findOrFail($id);
         $totals = $this->calculateGSTTotals($data);
 
-        return $this->invoiceRepository->update($id, [
-            'client_id' => $data->client_id,
-            'updated_by' => $data->updated_by,
-            'reference_number' => $data->reference_number,
-            'invoice_date' => $data->invoice_date,
-            'due_date' => $data->due_date,
-            'gst_mode' => $data->gst_mode,
-            'gst_rate' => $data->gst_rate ?? 18.00,
-            'place_of_supply' => $this->getPlaceOfSupply($data->company_id, $data->client_id),
-            'place_of_supply_state_code' => Client::find($data->client_id)->state_code ?? null,
-            'reverse_charge' => $data->reverse_charge ?? false,
-            'subtotal' => $totals->subtotal,
-            'discount_type' => $data->discount_type,
-            'discount_amount' => $totals->discountAmount,
-            'taxable_amount' => $totals->taxableAmount,
-            'cgst_amount' => $totals->taxBreakdown?->cgstAmount ?? 0,
-            'sgst_amount' => $totals->taxBreakdown?->sgstAmount ?? 0,
-            'igst_amount' => $totals->taxBreakdown?->igstAmount ?? 0,
-            'total_gst_amount' => $totals->totalGst,
-            'shipping_charges' => $totals->shippingCharges,
-            'commission' => $totals->commission,
-            'grand_total' => $totals->grandTotal,
-            'balance_due' => $totals->grandTotal,
-            'notes' => $data->notes,
-            'terms_and_conditions' => $data->terms_and_conditions,
-            'payment_terms' => $data->payment_terms ?? 'Net 15',
-            'show_hsn_sac' => $data->show_hsn_sac ?? true,
-            'items' => array_map(fn($item) => $item->toArray(), $data->items),
-        ]);
+        $updatedInvoice = DB::transaction(function () use ($oldInvoice, $data, $totals) {
+            // Update invoice header
+            $oldInvoice->update([
+                'client_id' => $data->client_id,
+                'updated_by' => $data->updated_by,
+                'reference_number' => $data->reference_number,
+                'invoice_date' => $data->invoice_date,
+                'due_date' => $data->due_date,
+                'gst_mode' => $data->gst_mode,
+                'place_of_supply' => $this->getPlaceOfSupply($data->company_id, $data->client_id),
+                // ... copy all header fields from create above ...
+                'subtotal' => $totals->subtotal,
+                'discount_amount' => $totals->discountAmount,
+                'taxable_amount' => $totals->taxableAmount,
+                'cgst_amount' => $totals->cgstAmount ?? 0,
+                'sgst_amount' => $totals->sgstAmount ?? 0,
+                'igst_amount' => $totals->igstAmount ?? 0,
+                'total_gst_amount' => $totals->totalGst,
+                'shipping_charges' => $totals->shippingCharges,
+                'commission' => $totals->commission,
+                'grand_total' => $totals->grandTotal,
+                'balance_due' => $totals->grandTotal - $oldInvoice->paid_amount,
+                'notes' => $data->notes,
+                'terms_and_conditions' => $data->terms_and_conditions,
+                'payment_terms' => $data->payment_terms ?? 'Net 15',
+            ]);
+
+            // Delete old items and recreate
+            $oldInvoice->items()->delete();
+            foreach ($data->items as $item) {
+                InvoiceItem::create([
+                    'invoice_id' => $oldInvoice->id,
+                    'product_id' => $item->productId,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'hsn_sac_code' => $item->hsn_sac_code,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'gst_rate' => $item->gst_rate,
+                    'taxable_amount' => $item->taxable_amount,
+                    'cgst_amount' => 0,   // will be updated if needed, or set properly
+                    'sgst_amount' => 0,
+                    'igst_amount' => 0,
+                    'line_total' => $item->unit_price * $item->quantity,
+                    // ... same as create
+                ]);
+            }
+
+            // Adjust stock: restore old stock + deduct new
+            $newInvoice = $oldInvoice->fresh()->load('items');
+            $this->invoiceStockService->adjustStockForEdit($oldInvoice, $newInvoice);
+
+            return $newInvoice;
+        });
+
+        return $updatedInvoice;
     }
+
+
 
     /**
      * Calculate GST totals with proper state logic
@@ -108,32 +175,66 @@ class GSTInvoiceService
     public function calculateGSTTotals(InvoiceData $data): InvoiceTotals
     {
         $subtotal = 0;
-        foreach ($data->items as $item) {
-            $subtotal += $item->unit_price * $item->quantity;
-        }
+        $totalCgst = 0;
+        $totalSgst = 0;
+        $totalIgst = 0;
+        $totalTaxable = 0;
 
         $sellerState = Company::find($data->company_id)->state_code ?? '24';
         $buyerState = Client::find($data->client_id)->state_code ?? '24';
+        $isIntraState = $sellerState === $buyerState;
 
-        if ($data->discount_type === 'fixed') {
-            $subtotal -= ($data->discount_amount ?? 0);
-            $discountPct = 0;
-        } else {
-            $discountPct = $data->discount_amount ?? 0;
+        foreach ($data->items as $item) {
+            $lineTotal = $item->unit_price * $item->quantity;
+            $subtotal += $lineTotal;
+
+            $gstRate = $item->gst_rate ?? 18;   // per item GST rate
+            $gstAmount = $lineTotal * ($gstRate / 100);
+
+            if ($isIntraState) {
+                $totalCgst += $gstAmount / 2;
+                $totalSgst += $gstAmount / 2;
+            } else {
+                $totalIgst += $gstAmount;
+            }
         }
 
-        return $this->taxBreakdownService->calculateInvoiceTax(
+        // Apply discount to subtotal
+        $discountAmount = 0;
+        $afterDiscount = $subtotal;
+        if ($data->discount_type === 'fixed') {
+            $discountAmount = $data->discount_amount ?? 0;
+            $afterDiscount -= $discountAmount;
+        } elseif ($data->discount_type === 'percentage') {
+            $discountPct = $data->discount_amount ?? 0;
+            $discountAmount = $subtotal * ($discountPct / 100);
+            $afterDiscount -= $discountAmount;
+        }
+
+        // Recalculate GST proportionally to the discounted subtotal (if discount applied)
+        if ($subtotal > 0) {
+            $ratio = $afterDiscount / $subtotal;
+            $totalCgst *= $ratio;
+            $totalSgst *= $ratio;
+            $totalIgst *= $ratio;
+        }
+
+        $totalGst = $totalCgst + $totalSgst + $totalIgst;
+        $grandTotal = $afterDiscount + $totalGst + ($data->shipping_charges ?? 0) + ($data->commission ?? 0);
+
+        return new InvoiceTotals(
             subtotal: $subtotal,
-            discountPercentage: $discountPct,
-            mode: $data->gst_mode ?? 'exclusive',
-            sellerState: $sellerState,
-            buyerState: $buyerState,
-            gstRate: $data->gst_rate ?? 18.00,
+            discountAmount: $discountAmount,
+            taxableAmount: $afterDiscount,
+            totalGst: $totalGst,
+            cgstAmount: $totalCgst,
+            sgstAmount: $totalSgst,
+            igstAmount: $totalIgst,
+            grandTotal: $grandTotal,
             shippingCharges: $data->shipping_charges ?? 0,
-            commission: $data->commission ?? 0
+            commission: $data->commission ?? 0,
         );
     }
-
     /**
      * Determine place of supply type
      */
@@ -197,7 +298,6 @@ class GSTInvoiceService
     {
         $filters['type'] = 'gst_invoice';
         return $this->invoiceRepository->getByCompany($companyId, $filters);
-        
     }
 
     /**
@@ -205,6 +305,11 @@ class GSTInvoiceService
      */
     public function deleteGSTInvoice(int $id): bool
     {
-        return $this->invoiceRepository->delete($id);
+        $invoice = Invoice::with('items')->findOrFail($id);
+        DB::transaction(function () use ($invoice) {
+            $this->invoiceStockService->restoreStock($invoice);
+            $invoice->delete();
+        });
+        return true;
     }
 }

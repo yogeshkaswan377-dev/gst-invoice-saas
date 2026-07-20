@@ -92,13 +92,15 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'company.selected.api'])->group
     Route::get('clients/filter/state', [ClientController::class, 'filterByState'])->name('api.clients.filter.state');
     Route::get('clients/filter/status', [ClientController::class, 'filterByStatus'])->name('api.clients.filter.status');
     Route::apiResource('clients', ClientController::class)->names('api.clients');
-    
+
     // ─────────────────────────────────────
     // Products
     // ─────────────────────────────────────
 
     Route::get('products/search', [ProductController::class, 'search'])->name('api.products.search');
     Route::apiResource('products', ProductController::class)->names('api.products');
+    Route::get('products/{product}/stock-info', [ProductController::class, 'stockInfo'])
+        ->name('api.products.stock-info');
 
     // ─────────────────────────────────────
     // Proforma Invoices

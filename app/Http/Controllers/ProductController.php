@@ -2,126 +2,178 @@
 
 namespace App\Http\Controllers;
 
+use App\DTOs\ProductData;
+use App\DTOs\StockAdjustmentData;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Http\Requests\StockAdjustmentRequest;
 use App\Models\Product;
+use App\Services\ProductService;
+use App\Services\StockService;
+use App\Repositories\Contracts\StockHistoryRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
-    /**
-     * Display listing of products
-     */
-    // app/Http/Controllers/ProductController.php
+    public function __construct(
+        private ProductService $productService,
+        private StockService $stockService,
+        private StockHistoryRepositoryInterface $historyRepository
+    ) {}
 
     public function index(Request $request)
     {
-        $companyId = session('current_company_id') ?? auth()->user()->current_company_id;
+        $companyId = Auth::user()->current_company_id;
 
-        $query = Product::where('company_id', $companyId);
-
-        // Search filter
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('hsn_sac_code', 'like', "%{$search}%");
-            });
-        }
-
-        // GST Rate filter
-        if ($request->filled('gst_rate')) {
-            $query->where('gst_rate', $request->gst_rate);
-        }
-
-        $products = $query->latest()->paginate(12);
+        $products = $this->productService->getAllForCompany($companyId, [
+            'search'   => $request->input('search'),
+            'gst_rate' => $request->input('gst_rate'),
+        ]);
 
         return view('products.index', compact('products'));
     }
 
-    /**
-     * Show create form
-     */
     public function create()
     {
         return view('products.create');
     }
 
-    /**
-     * Store new product
-     */
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'hsn_sac_code' => 'nullable|string|max:8',
-            'unit_price' => 'required|numeric|min:0',
-            'gst_rate' => 'required|numeric|in:0,5,12,18,28',
-            'unit' => 'nullable|string|max:20',
-        ]);
+        $data = new ProductData(
+            companyId: Auth::user()->current_company_id,
+            itemNo: $request->item_no,
+            name: $request->name,
+            description: $request->description,
+            hsnSacCode: $request->hsn_sac_code,
+            unitPrice: $request->unit_price,
+            gstRate: $request->gst_rate,
+            unit: $request->unit,
+            isActive: true,
+            stock: $request->stock ?? 0,
+            stockUnit: $request->stock_unit,
+            stockDeductionType: $request->stock_deduction_type,
+            consumptionPerPiece: $request->consumption_per_piece,
+            minimumStock: $request->minimum_stock ?? 0,
+            sellingPrice: $request->selling_price,
+        );
 
-        Product::create([
-            'company_id' => Auth::user()->current_company_id,
-            ...$validated
-        ]);
+        $this->productService->create($data);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product created successfully!');
+        return redirect()->route('products.index')->with('success', 'Product created successfully!');
     }
 
-    /**
-     * Show edit form
-     */
     public function edit(Product $product)
     {
         return view('products.edit', compact('product'));
     }
 
-    /**
-     * Update product
-     */
-    public function update(Request $request, Product $product)
+    public function update(UpdateProductRequest $request, Product $product)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'hsn_sac_code' => 'nullable|string|max:8',
-            'unit_price' => 'required|numeric|min:0',
-            'gst_rate' => 'required|numeric|in:0,5,12,18,28',
-            'unit' => 'nullable|string|max:20',
-            'is_active' => 'boolean',
-        ]);
+        $data = new ProductData(
+            companyId: $product->company_id,
+            itemNo: $request->item_no,
+            name: $request->name,
+            description: $request->description,
+            hsnSacCode: $request->hsn_sac_code,
+            unitPrice: $request->unit_price,
+            gstRate: $request->gst_rate,
+            unit: $request->unit,
+            isActive: $request->boolean('is_active', true),
+            stock: $product->stock,         // stock not changed via edit form
+            stockUnit: $request->stock_unit,
+            stockDeductionType: $request->stock_deduction_type,
+            consumptionPerPiece: $request->consumption_per_piece,
+            minimumStock: $request->minimum_stock ?? 0,
+            sellingPrice: $request->selling_price,
+        );
 
-        $product->update($validated);
+        $this->productService->update($product, $data);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product updated successfully!');
+        return redirect()->route('products.index')->with('success', 'Product updated.');
     }
 
-    /**
-     * Delete product
-     */
     public function destroy(Product $product)
     {
-        $product->delete();
-
-        return redirect()->route('products.index')
-            ->with('success', 'Product deleted successfully!');
+        $this->productService->delete($product);
+        return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
 
+    public function adjustStock(StockAdjustmentRequest $request, Product $product)
+    {
+        $adjustmentData = new StockAdjustmentData(
+            productId: $product->id,
+            companyId: Auth::user()->current_company_id,
+            userId: Auth::id(),
+            adjustmentType: $request->adjustment_type,
+            quantity: $request->quantity,
+            remarks: $request->remarks,
+        );
+
+        try {
+            $this->stockService->adjustStock($adjustmentData);
+            return redirect()->route('products.index')->with('success', 'Stock adjusted.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    public function stockHistory(Product $product)
+    {
+        $histories = $this->historyRepository->getForProduct($product->id, Auth::user()->current_company_id);
+        return view('products.stock-history', compact('product', 'histories'));
+    }
+
+    public function import()
+    {
+        return view('products.import');
+    }
+
+    public function processImport(Request $request) // Placeholder, implement with CSV import service
+    {
+        // ...
+    }
+
+    public function export()
+    {
+        // Placeholder for CSV export
+    }
+
+    // ============================================================
+    // AJAX Endpoints for Invoice Builder
+    // ============================================================
+
     /**
-     * Search products (AJAX - for invoice builder)
+     * Search products for invoice line item (AJAX)
      */
     public function search(Request $request)
     {
         $companyId = Auth::user()->current_company_id;
 
-        $products = Product::forCompany($companyId)
-            ->active()
-            ->search($request->q)
+        $query = $request->get('q');
+        $products = Product::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('hsn_sac_code', 'LIKE', "%{$query}%");
+            })
             ->limit(10)
             ->get(['id', 'name', 'hsn_sac_code', 'unit_price', 'gst_rate']);
 
         return response()->json($products);
+    }
+
+    /**
+     * Get stock/deduction info for a product (AJAX)
+     */
+    public function stockInfo(Product $product)
+    {
+        return response()->json([
+            'stock' => $product->stock,
+            'stock_unit' => $product->stock_unit,
+            'stock_deduction_type' => $product->stock_deduction_type,
+            'consumption_per_piece' => $product->consumption_per_piece,
+        ]);
     }
 }

@@ -17,6 +17,7 @@ class InvoiceItemData
         public readonly float $discount_amount = 0,
         public readonly float $gst_rate = 18.00,
         public readonly float $taxable_amount = 0,
+        public readonly ?int $productId = null, 
         public readonly float $cgst_amount = 0,
         public readonly float $sgst_amount = 0,
         public readonly float $igst_amount = 0,

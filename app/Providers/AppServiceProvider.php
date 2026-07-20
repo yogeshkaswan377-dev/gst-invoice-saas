@@ -17,6 +17,10 @@ use App\Services\GST\GSTCalculationService;
 use App\Services\GST\TaxBreakdownService;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Repositories\InvoiceRepository;
+use App\Repositories\Contracts\ProductRepositoryInterface;
+use App\Repositories\ProductRepository;
+use App\Repositories\Contracts\StockHistoryRepositoryInterface;
+use App\Repositories\StockHistoryRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +39,18 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             InvoiceRepositoryInterface::class,
             InvoiceRepository::class
+        );
+
+        // Product Repository
+        $this->app->bind(
+            ProductRepositoryInterface::class,
+            ProductRepository::class
+        );
+
+        // Stock History Repository
+        $this->app->bind(
+            StockHistoryRepositoryInterface::class,
+            StockHistoryRepository::class
         );
     }
 
