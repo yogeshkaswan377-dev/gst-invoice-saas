@@ -42,3 +42,87 @@
 5. **UI/UX** (P3) – Dashboard, analytics, mobile sidebar.
 
 Ready to continue? Just say the word! 🚀
+
+
+
+Title
+Company Settings – Field‑Name Mismatch, JSON Handling, and Column Type Errors
+
+What Type of Bug Was It?
+This was a silent data persistence failure combined with multiple runtime errors (TypeError, QueryException).
+The underlying causes were:
+
+Form field names didn’t match database column names – data was submitted but never stored.
+
+Inconsistent data types – a text value was sent to an integer column.
+
+Improper handling of JSON fields – json_decode() was called on an already‑decoded array.
+
+Missing logo/signature upload fields in the view.
+
+Missing controller methods for the separate settings forms.
+
+All these issues together made the Company Settings page appear broken: forms would refresh without saving, and some sections threw 500 errors.
+
+How We Fixed It (Step by Step)
+1. Missing Controller Methods (500 Error)
+Problem: Routes pointed to updateSettings(), updateGst(), updateBank(), updatePreferences() – but only a generic update() method existed.
+Fix: Added the four dedicated methods to CompanyController, each handling a specific form. The methods were kept thin, calling existing services and the repository.
+
+2. Form Field ↔ Database Column Mismatch (Silent Failure)
+Problem:
+
+GST form used default_gst_rate and gst_mode, but the database had no such columns. GST data lived in a JSON column gst_settings and a column gst_mode_default.
+
+Preferences form used payment_terms (sending "Net 15"), but the column was default_payment_terms (integer).
+
+Preferences form used proforma_prefix, but the column was quote_prefix.
+
+Fix:
+
+Created mapping logic in the controller methods that translates form field names to actual column names.
+
+For GST: merged the submitted values into the gst_settings JSON and also updated gst_mode_default.
+
+For Preferences: renamed payment_terms → default_payment_terms (cast to integer) and proforma_prefix → quote_prefix.
+
+Updated the corresponding FormRequest classes to validate the new fields.
+
+3. Payment Terms Data Type Error (SQLSTATE 22007)
+Problem: The dropdown in the view sent string values like "Net 15" to an integer column.
+Fix: Changed the dropdown’s value attributes to numeric strings ("15", "30", etc.) and cast the value to (int) in the controller.
+
+4. GST JSON Handling Error (TypeError)
+Problem: json_decode() was called on $company->gst_settings, but the model already cast it to an array (or the value was already an array), causing a TypeError.
+Fix: Added a type check – if the value is already an array, use it directly; otherwise decode the string. Then re‑encode it before storing. To simplify, we also added an Eloquent accessor for default_gst_rate and gst_mode so the view can read the values correctly without worrying about the underlying storage.
+
+5. Missing Logo & Signature Upload Fields
+Problem: The view had no file inputs for logo/signature, so users couldn’t upload them.
+Fix: Added <input type="file"> elements to the Company Profile form, along with existing image previews. The controller already had logic to handle uploads via CompanySettingsService.
+
+6. Validation & Error Display
+Problem: Even after fixing the above, if validation failed, no error messages were shown.
+Fix: Added a generic error alert at the top of the page and per‑form validation error displays using named error bags (optional).
+
+7. Model Configuration
+Problem: Some columns (quote_prefix, gst_mode_default) were not fillable or not cast correctly.
+Fix:
+
+Added missing fields to $fillable in the Company model.
+
+Added a $casts array to auto‑cast gst_settings, invoice_preferences, and bank_details to arrays.
+
+Added Eloquent accessors for gst_mode and default_gst_rate that pull values from either the dedicated column or the JSON field, so the Blade templates work without any changes.
+
+Final Outcome
+After these fixes:
+
+Company Profile saves correctly (including logo & signature uploads).
+
+GST Configuration updates the JSON gst_settings and the gst_mode_default column.
+
+Invoice Preferences saves the numeric payment terms, invoice prefix, and quote prefix.
+
+No more 500 errors or silent refresh loops – all forms display success messages.
+
+The view consistently shows the saved values after reload.
