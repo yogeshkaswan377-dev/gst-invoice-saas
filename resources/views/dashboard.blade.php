@@ -119,6 +119,98 @@
     </div>
 </div>
 
+{{-- Inventory Stats Row --}}
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card" style="border-left-color: #6366f1;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-2">Total Products</h6>
+                    <h3 class="mb-0 fw-bold">{{ $totalProducts ?? 0 }}</h3>
+                </div>
+                <div>
+                    <i class="fas fa-box fa-2x opacity-25" style="color:#6366f1;"></i>
+                </div>
+            </div>
+            <small class="text-muted mt-2 d-block">Active products in inventory</small>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card" style="border-left-color: #10b981;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-2">Current Stock</h6>
+                    <h3 class="mb-0 fw-bold">{{ number_format($totalStock ?? 0, 2) }} Mtr</h3>
+                </div>
+                <div>
+                    <i class="fas fa-ruler-combined fa-2x opacity-25" style="color:#10b981;"></i>
+                </div>
+            </div>
+            <small class="text-muted mt-2 d-block">Total fabric available</small>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card" style="border-left-color: #f59e0b;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-2">Low Stock</h6>
+                    <h3 class="mb-0 fw-bold">{{ $lowStockCount ?? 0 }}</h3>
+                </div>
+                <div>
+                    <i class="fas fa-exclamation-triangle fa-2x opacity-25" style="color:#f59e0b;"></i>
+                </div>
+            </div>
+            <small class="text-muted mt-2 d-block">Items below minimum level</small>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="stat-card" style="border-left-color: #ef4444;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-2">Out of Stock</h6>
+                    <h3 class="mb-0 fw-bold">{{ $outOfStockCount ?? 0 }}</h3>
+                </div>
+                <div>
+                    <i class="fas fa-times-circle fa-2x opacity-25" style="color:#ef4444;"></i>
+                </div>
+            </div>
+            <small class="text-muted mt-2 d-block">Products with zero stock</small>
+        </div>
+    </div>
+</div>
+
+{{-- Consumption & Low Stock Table --}}
+<div class="row mb-4">
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3"><i class="fas fa-chart-line me-2 text-info"></i>Today's Consumption</h5>
+                <h2 class="fw-bold">{{ number_format($todayConsumption ?? 0, 2) }} Mtr</h2>
+                <small class="text-muted">Fabric consumed today via invoices</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3"><i class="fas fa-exclamation-circle me-2 text-warning"></i>Low Stock Products</h5>
+                @if(isset($lowStockProducts) && $lowStockProducts->isNotEmpty())
+                <ul class="list-group list-group-flush">
+                    @foreach($lowStockProducts as $product)
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        {{ $product->name }}
+                        <span class="badge bg-warning text-dark">{{ $product->stock }} {{ $product->stock_unit }}</span>
+                    </li>
+                    @endforeach
+                </ul>
+                @else
+                <p class="text-muted">All products are sufficiently stocked.</p>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Invoice Status Cards --}}
 <div class="row mb-4">
     <div class="col-md-3 col-sm-6 mb-3">

@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\Client;
 use App\Models\Company;
-use Carbon\Carbon;
+use App\Models\Product;
+use App\Models\StockHistory;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -121,6 +124,31 @@ class DashboardController extends Controller
             $chartData[] = (float) $sum;
         }
 
+        // ────────── Inventory Stats ──────────
+        $totalProducts = Product::where('company_id', $companyId)->where('is_active', true)->count();
+        $totalStock = Product::where('company_id', $companyId)->sum('stock');
+        $lowStockCount = Product::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where('stock', '>', 0)
+            ->whereColumn('stock', '<=', 'minimum_stock')
+            ->count();
+        $outOfStockCount = Product::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where('stock', '<=', 0)
+            ->count();
+        $todayConsumption = StockHistory::where('company_id', $companyId)
+            ->whereDate('created_at', Carbon::today())
+            ->where('action', 'invoice_create')   // or whatever action string you use for invoice deductions
+            ->sum('consumed_stock');
+
+        $lowStockProducts = Product::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where('stock', '>', 0)
+            ->whereColumn('stock', '<=', 'minimum_stock')
+            ->orderBy('stock')
+            ->limit(5)
+            ->get();
+
         return view('dashboard', compact(
             'company',
             'totalInvoices',
@@ -138,7 +166,14 @@ class DashboardController extends Controller
             'recentInvoices',
             'recentClients',
             'chartLabels',
-            'chartData'
+            'chartData',
+            // new inventory variables
+            'totalProducts',
+            'totalStock',
+            'lowStockCount',
+            'outOfStockCount',
+            'todayConsumption',
+            'lowStockProducts'
         ));
     }
 }
