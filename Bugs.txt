@@ -1,0 +1,412 @@
+Isko maine clean, structured aur AI/dev ko samajhne layak format me rewrite kiya hai — taaki woh direct issue breakdown aur fixing start kar sake:
+
+---
+
+# GST Invoice SaaS – QA / Bug Report (Phase Testing)
+
+## Environment
+
+* Laravel: 12.59.0
+* PHP: 8.2.12
+* Local URL: `http://127.0.0.1:8000`
+
+---
+
+# 1. Super Admin Issues
+
+## Dashboard (`/super-admin/dashboard`)
+
+### Problems:
+
+* Dashboard stats are showing placeholder/fake data.
+* Charts are not rendering.
+
+### Expected:
+
+* Real database-driven statistics.
+* Functional analytics charts.
+
+---
+
+## Invoices (`/super-admin/invoices`)
+
+### Problems:
+
+* Search functionality does not work.
+
+### Expected:
+
+* Search should filter invoices correctly.
+
+---
+
+## Proformas (`/super-admin/proformas`)
+
+### Problems:
+
+* Displays `No Proformas Found`.
+
+### Expected:
+
+* Show actual available proformas.
+
+---
+
+## Analytics (`/super-admin/analytics`)
+
+### Problems:
+
+Page only displays text.
+
+### Expected:
+
+Implement actual analytics dashboards:
+
+### Engine Core Analytics
+
+* Database usage graphs
+* Bandwidth usage charts
+* Latency metrics
+
+### Revenue Analytics
+
+* Platform revenue charts
+
+### User Growth
+
+* Signup metrics
+* Conversion analytics
+
+---
+
+## Subscriptions (`/super-admin/subscriptions`)
+
+### Problems:
+
+* Showing static/mock data.
+* UI only contains text.
+
+### Expected:
+
+* Real subscription statistics.
+* Dynamic revenue calculations.
+* Functional subscription management.
+
+---
+
+## Logs (`/super-admin/logs`)
+
+### Problems:
+
+* Displays placeholder text.
+
+### Expected:
+
+* Actual system logs.
+
+---
+
+## User Management
+
+### Problems:
+
+* Suspend action not working.
+* Approve action not working.
+* User search not working.
+
+### Expected:
+
+* Working moderation actions.
+
+---
+
+## Companies (`/super-admin/companies`)
+
+### Problems:
+
+* Search not working.
+* Remove “Create Company” option.
+
+---
+
+# 2. General Dashboard Issues
+
+## Mobile Sidebar
+
+### Problems:
+
+* Logout button hidden in mobile view.
+
+### Expected:
+
+* Sidebar footer visible on mobile.
+
+---
+
+# 3. Owner Module Issues
+
+## Clients (`/clients`)
+
+### Problems:
+
+* Filter not working.
+* Only 5 states available.
+
+### Expected:
+
+* Proper filtering.
+* Full state list.
+
+---
+
+## Create Client (`/clients/create`)
+
+### Problems:
+
+* No option:
+
+  * Business
+  * Individual
+* Save button refreshes page.
+* Data not saved.
+
+---
+
+## Edit Client (`/clients/{id}/edit`)
+
+### Problems:
+
+* Update refreshes page.
+* Changes not saved.
+* Delete option missing.
+
+---
+
+## Products (`/products`)
+
+### Problems:
+
+* Filter not working.
+
+---
+
+## Product Create/Edit
+
+### Problems:
+
+* Save/Update refreshes page.
+* No data persistence.
+
+---
+
+# 4. Proforma Module
+
+## Proformas (`/proformas`)
+
+### Problems:
+
+* No records displayed.
+
+---
+
+## Proforma View (`/proformas/1`)
+
+### Error:
+
+```text
+Undefined variable $proforma
+```
+
+### Root Cause:
+
+View expects:
+
+```php
+$proforma
+```
+
+Controller likely sends:
+
+```php
+$invoice
+```
+
+### Action:
+
+Fix:
+
+```php
+ProformaController@show()
+```
+
+Pass correct variable.
+
+---
+
+# 5. Invoice Creation Issues
+
+## GST Invoice (`/gst-invoices/create`)
+
+### Problems:
+
+* Cannot manually enter client if not in dropdown.
+* Cannot delete extra line items.
+* Totals calculation broken.
+* Save refreshes page.
+
+### Expected:
+
+* Manual client mode.
+* Remove line item option.
+* Auto totals.
+* Successful creation.
+
+---
+
+# 6. Reports
+
+## Sidebar Reports
+
+### Problems:
+
+Clicking Reports always opens:
+
+```text
+/reports/gstr1
+```
+
+Cannot access:
+
+```text
+/reports/outstanding
+```
+
+### Expected:
+
+* Reports submenu.
+
+---
+
+## GSTR1 (`/reports/gstr1`)
+
+### Problems:
+
+* Workflow unclear.
+* Excel export empty.
+* CSV dates empty.
+* Mixing:
+
+  * Proforma
+  * Invoice
+
+### Expected:
+
+* Separate report logic.
+* Working exports.
+* Documentation/help text.
+
+---
+
+# 7. Company Settings
+
+## `/company/settings`
+
+### Errors:
+
+```text
+CompanyController::updateSettings() does not exist
+CompanyController::updateGst() does not exist
+CompanyController::updatePreferences() does not exist
+```
+
+### Action:
+
+Implement controller methods or fix route bindings.
+
+Also:
+
+### Missing:
+
+Settings → Logo Settings → Signature not visible.
+
+---
+
+# 8. Profile Issues
+
+## `/profile`
+
+### Problems:
+
+* Change photo not working.
+* Designation field editable.
+
+### Expected:
+
+* Photo upload works.
+* Role/designation should be read-only.
+
+---
+
+# 9. Role & Permission Failure
+
+## Current Issue
+
+Admin and Staff can perform Owner actions.
+
+### Restriction Required:
+
+### Admin
+
+Allowed:
+
+* Dashboard
+* Client CRUD
+* Invoice CRUD
+* PDF Download
+* Profile Edit
+
+Blocked:
+
+* Delete
+* Company Settings
+* Staff Invite
+
+---
+
+### Staff
+
+Allowed:
+
+* Dashboard
+* View Clients
+* View Invoices
+* Profile Edit
+
+Blocked:
+
+* Create
+* Edit
+* Delete
+* Settings
+
+### Expected:
+
+Implement proper:
+
+```text
+Role → Permission → Middleware → Policy → UI Restriction
+```
+
+---
+
+## Priority Order for Fixing
+
+P0 → Save/Create/Update failures
+P1 → Missing controller methods
+P2 → Role permission leaks
+P3 → Search/filter issues
+P4 → Analytics/UI improvements
+
+---
+
+Ab yeh version kisi AI ya developer ko doge toh woh directly issue tracking aur fixing start kar sakta hai.

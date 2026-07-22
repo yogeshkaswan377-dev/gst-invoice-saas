@@ -11,6 +11,16 @@
     </div>
 </div>
 
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
 <div class="row g-4">
     <div class="col-lg-8">
         {{-- Company Profile --}}
@@ -18,13 +28,25 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-4"><i class="fas fa-building me-2 text-primary"></i>Company Profile</h5>
 
-                <form action="{{ route('company.settings.update') }}" method="POST">
+                <form action="{{ route('company.settings.update') }}" method="POST" enctype="multipart/form-data">
                     @csrf @method('PUT')
+
+                    {{-- Display errors for this form --}}
+                    @if ($errors->updateSettings->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach ($errors->updateSettings->all() as $error)
+                            <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
 
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">Company Name *</label>
                             <input type="text" name="name" value="{{ old('name', $company->name ?? '') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" required>
+                            @error('name', 'updateSettings')<span class="text-danger small">{{ $message }}</span>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">Trade Name</label>
@@ -51,6 +73,24 @@
                         <div class="col-md-4">
                             <input type="text" name="pincode" value="{{ old('pincode', $company->pincode ?? '') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" placeholder="Pincode">
                         </div>
+
+                        {{-- Logo Upload --}}
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:13px;">Company Logo</label>
+                            <input type="file" name="logo" class="form-control" accept="image/*" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
+                            @if($company->logo_path)
+                            <img src="{{ Storage::url($company->logo_path) }}" class="mt-2 rounded" height="40">
+                            @endif
+                        </div>
+
+                        {{-- Signature Upload --}}
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:13px;">Signature</label>
+                            <input type="file" name="signature" class="form-control" accept="image/*" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
+                            @if($company->signature_path)
+                            <img src="{{ Storage::url($company->signature_path) }}" class="mt-2 rounded" height="40">
+                            @endif
+                        </div>
                     </div>
 
                     <div class="mt-4">
@@ -70,10 +110,21 @@
                 <form action="{{ route('company.gst.update') }}" method="POST">
                     @csrf @method('PUT')
 
+                    @if ($errors->updateGst->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach ($errors->updateGst->all() as $error)
+                            <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">GSTIN *</label>
                             <input type="text" name="gstin" value="{{ old('gstin', $company->gstin ?? '') }}" class="form-control text-uppercase" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" placeholder="22AAAAA0000A1Z5" maxlength="15" required>
+                            @error('gstin', 'updateGst')<span class="text-danger small">{{ $message }}</span>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">PAN</label>
@@ -83,15 +134,15 @@
                             <label class="form-label fw-semibold" style="font-size:13px;">Default GST Rate (%)</label>
                             <select name="default_gst_rate" class="form-select" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
                                 @foreach([0,5,12,18,28] as $rate)
-                                <option value="{{ $rate }}" {{ ($company->default_gst_rate ?? 18) == $rate ? 'selected' : '' }}>{{ $rate }}%</option>
+                                <option value="{{ $rate }}" {{ old('default_gst_rate', $company->default_gst_rate ?? 18) == $rate ? 'selected' : '' }}>{{ $rate }}%</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">Tax Mode</label>
                             <select name="gst_mode" class="form-select" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
-                                <option value="exclusive" {{ ($company->gst_mode ?? 'exclusive') == 'exclusive' ? 'selected' : '' }}>Tax Exclusive</option>
-                                <option value="inclusive" {{ ($company->gst_mode ?? '') == 'inclusive' ? 'selected' : '' }}>Tax Inclusive</option>
+                                <option value="exclusive" {{ old('gst_mode', $company->gst_mode ?? 'exclusive') == 'exclusive' ? 'selected' : '' }}>Tax Exclusive</option>
+                                <option value="inclusive" {{ old('gst_mode', $company->gst_mode ?? '') == 'inclusive' ? 'selected' : '' }}>Tax Inclusive</option>
                             </select>
                         </div>
                     </div>
@@ -115,24 +166,42 @@
                 <form action="{{ route('company.preferences.update') }}" method="POST">
                     @csrf @method('PUT')
 
+                    @if ($errors->updatePreferences->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach ($errors->updatePreferences->all() as $error)
+                            <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+
                     <div class="mb-3">
                         <label class="form-label fw-semibold" style="font-size:13px;">Invoice Prefix</label>
                         <input type="text" name="invoice_prefix" value="{{ old('invoice_prefix', $company->invoice_prefix ?? 'INV') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:13px;">Proforma Prefix</label>
-                        <input type="text" name="proforma_prefix" value="{{ old('proforma_prefix', $company->proforma_prefix ?? 'PRO') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
+                        <label class="form-label fw-semibold" style="font-size:13px;">Quote Prefix</label>
+                        <input type="text" name="quote_prefix" value="{{ old('quote_prefix', $company->quote_prefix ?? 'QUO') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold" style="font-size:13px;">Default Payment Terms</label>
-                        <select name="payment_terms" class="form-select" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
-                            @foreach(['Net 7','Net 15','Net 30','Net 45','Due on Receipt'] as $term)
-                            <option value="{{ $term }}" {{ ($company->payment_terms ?? 'Net 15') == $term ? 'selected' : '' }}>{{ $term }}</option>
+                        <select name="payment_terms" class="form-select" style="...">
+                            @foreach([
+                            '7' => 'Net 7',
+                            '15' => 'Net 15',
+                            '30' => 'Net 30',
+                            '45' => 'Net 45',
+                            '0' => 'Due on Receipt'
+                            ] as $value => $label)
+                            <option value="{{ $value }}" {{ old('payment_terms', $company->default_payment_terms ?? 15) == $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
                     <div class="form-check mb-2">
-                        <input type="checkbox" name="show_hsn_sac" value="1" {{ ($company->show_hsn_sac ?? true) ? 'checked' : '' }} class="form-check-input">
+                        <input type="checkbox" name="show_hsn_sac" value="1" {{ old('show_hsn_sac', $company->show_hsn_sac ?? true) ? 'checked' : '' }} class="form-check-input">
                         <label class="form-check-label" style="font-size:13px;">Show HSN/SAC in invoices</label>
                     </div>
 

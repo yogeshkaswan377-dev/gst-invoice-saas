@@ -34,7 +34,15 @@ class Company extends Model
         'phone',
         'website',
         'pan',
-        'cin'
+        'cin',
+        'gstin',
+        'pan',
+        'gst_mode_default',
+        'gst_settings',
+        'default_payment_terms',
+        'invoice_prefix',
+        'quote_prefix',
+        'show_hsn_sac'
     ];
 
     protected $casts = [
@@ -44,6 +52,27 @@ class Company extends Model
         'invoice_preferences' => 'array',
         'gst_mode_default' => 'string',
     ];
+
+    public function getGstModeAttribute(): string
+    {
+        // Check the dedicated column (if exists)
+        if (!empty($this->attributes['gst_mode_default'])) {
+            return $this->attributes['gst_mode_default'];
+        }
+
+        // Fallback to the JSON field
+        $settings = $this->gst_settings ?? [];
+        return $settings['default_mode'] ?? 'exclusive';
+    }
+
+    /**
+     * Accessor for the default GST rate (0,5,12,18,28).
+     */
+    public function getDefaultGstRateAttribute(): int
+    {
+        $settings = $this->gst_settings ?? [];
+        return (int) ($settings['default_rate'] ?? 18);
+    }
 
     public function invoices()
     {

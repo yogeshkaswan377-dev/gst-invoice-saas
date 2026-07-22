@@ -7,6 +7,11 @@ use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Repositories\Contracts\CompanyRepositoryInterface;
 use App\DTOs\CompanyData;
+use App\Services\Company\CompanySettingsService;
+use App\Http\Requests\UpdateCompanySettingsRequest;
+use App\Http\Requests\UpdateCompanyGstRequest;
+use App\Http\Requests\UpdateCompanyBankRequest;
+use App\Http\Requests\UpdateCompanyPreferencesRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -14,10 +19,14 @@ use Illuminate\Support\Facades\Storage;
 class CompanyController extends Controller
 {
     protected CompanyRepositoryInterface $companyRepository;
+    protected CompanySettingsService $companySettingsService;
 
-    public function __construct(CompanyRepositoryInterface $companyRepository)
-    {
+    public function __construct(
+        CompanyRepositoryInterface $companyRepository,
+        CompanySettingsService $companySettingsService
+    ) {
         $this->companyRepository = $companyRepository;
+        $this->companySettingsService = $companySettingsService;
     }
 
     public function create()
@@ -81,23 +90,69 @@ class CompanyController extends Controller
         return view('company.settings', compact('company'));
     }
 
-    public function update(UpdateCompanyRequest $request, $companyId)
+    public function updateSettings(UpdateCompanySettingsRequest $request)
     {
-        $company = $this->companyRepository->findOrFail($companyId);
+        $company = $request->user()->currentCompany;
+        $data = $request->validated();
 
-        // Logo Upload
+        $this->companyRepository->updateSettings($company->id, $data);
+
         if ($request->hasFile('logo')) {
-            $this->companyRepository->updateLogo($companyId, $request->file('logo'));
+            $this->companySettingsService->updateLogo($company->id, $request->file('logo'));
         }
-
-        // Signature Upload
         if ($request->hasFile('signature')) {
-            $this->companyRepository->updateSignature($companyId, $request->file('signature'));
+            $this->companySettingsService->updateSignature($company->id, $request->file('signature'));
         }
 
-        // Update other settings
-        $this->companyRepository->updateSettings($companyId, $request->validated());
+        return redirect()->route('company.settings')
+            ->with('success', 'Company settings updated.');
+    }
 
-        return redirect()->route('company.settings')->with('success', 'Company updated successfully!');
+    public function updateGst(UpdateCompanyGstRequest $request)
+    {
+        $company = $request->user()->currentCompany;
+
+        $data = $request->only(['gstin', 'pan']);
+        $data['gst_mode_default'] = $request->gst_mode;   // map to actual column name
+
+        // Safely get current GST settings (could be string or already decoded)
+        $currentSettings = $company->gst_settings;
+        if (is_string($currentSettings)) {
+            $currentSettings = json_decode($currentSettings, true) ?? [];
+        } elseif (is_array($currentSettings)) {
+            // already an array (if model cast exists)
+        } else {
+            $currentSettings = [];
+        }
+
+        $currentSettings['default_rate'] = (int) $request->default_gst_rate;
+        $currentSettings['default_mode'] = $request->gst_mode;
+
+        // If model casts gst_settings to array, we can assign array directly; 
+        // if not, encode to JSON string.
+        if ($company->hasCast('gst_settings', 'array')) {
+            $data['gst_settings'] = $currentSettings;
+        } else {
+            $data['gst_settings'] = json_encode($currentSettings);
+        }
+
+        $this->companyRepository->updateSettings($company->id, $data);
+
+        return redirect()->route('company.settings')->with('success', 'GST settings updated.');
+    }
+
+    public function updatePreferences(UpdateCompanyPreferencesRequest $request)
+    {
+        $company = $request->user()->currentCompany;
+
+        $data = [
+            'invoice_prefix'        => $request->invoice_prefix,
+            'quote_prefix'          => $request->quote_prefix,
+            'default_payment_terms' => (int) $request->payment_terms,   // cast to int
+        ];
+
+        $this->companyRepository->updateSettings($company->id, $data);
+
+        return redirect()->route('company.settings')->with('success', 'Invoice preferences updated.');
     }
 }
