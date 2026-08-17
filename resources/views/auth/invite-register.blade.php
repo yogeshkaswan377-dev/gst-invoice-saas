@@ -125,10 +125,10 @@
 
         <div class="invite-badge">
             <div class="company">
-                <i class="fas fa-building me-2"></i> {{ $invitation->company->name ?? 'Company Name' }}
+                <i class="fas fa-building me-2"></i> {{ $invite->company->name ?? 'Company Name' }}
             </div>
             <div class="role mt-1">
-                <i class="fas fa-user-tag me-1"></i> Role: {{ ucfirst($invitation->role ?? 'Staff') }}
+                <i class="fas fa-user-tag me-1"></i> Role: {{ ucfirst($invite->role ?? 'Staff') }}
             </div>
         </div>
 
@@ -140,18 +140,18 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('invitation.accept', $invitation->token) }}">
+        <form action="{{ route('invite.register', $invite->token) }}" method="POST">
             @csrf
 
             <div class="mb-3">
                 <label class="form-label fw-semibold" style="font-size:13px;">Full Name *</label>
-                <input type="text" name="name" value="{{ old('name', $invitation->email ?? '') }}" class="form-control" required>
+                <input type="text" name="name" value="{{ old('name', $invite->email ?? '') }}" class="form-control" required>
             </div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold" style="font-size:13px;">Email</label>
-                <input type="email" value="{{ $invitation->email }}" class="form-control" disabled style="background:#f8fafc;">
-                <input type="hidden" name="email" value="{{ $invitation->email }}">
+                <input type="email" value="{{ $invite->email }}" class="form-control" disabled style="background:#f8fafc;">
+                <input type="hidden" name="email" value="{{ $invite->email }}">
             </div>
 
             <div class="mb-3">
@@ -181,8 +181,8 @@
         </form>
 
         <p class="footer-text">
-            Invited by {{ $invitation->invitedBy->name ?? 'Admin' }} •
-            Expires {{ $invitation->expires_at?->format('d M, Y') ?? 'Never' }}
+            Invited by {{ $invite->invitedBy->name ?? 'Admin' }} •
+            Expires {{ $invite->expires_at?->format('d M, Y') ?? 'Never' }}
         </p>
     </div>
 </body>

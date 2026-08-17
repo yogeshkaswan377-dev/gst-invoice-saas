@@ -4,6 +4,21 @@
 @section('meta_description', 'Invite team members to your company workspace.')
 
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
+@if (session('success'))
+<div class="alert alert-success">
+    {!! session('success') !!}
+</div>
+@endif
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <div>
         <h2 style="font-size:18px; font-weight:700; margin:0;">Invite Staff</h2>
@@ -31,7 +46,6 @@
                             <select name="role" class="form-select" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" required>
                                 <option value="">Select Role</option>
                                 <option value="admin">Admin</option>
-                                <option value="manager">Manager</option>
                                 <option value="staff">Staff</option>
                             </select>
                         </div>
@@ -73,25 +87,27 @@
                             <tr>
                                 <td class="ps-4 fw-semibold">{{ $invite->email }}</td>
                                 <td><span class="badge rounded-pill" style="background:#ede9fe; color:#7c3aed;">{{ ucfirst($invite->role) }}</span></td>
-                                <td class="text-muted">{{ $invite->created_at->format('d M Y') }}</td>
-                                <td class="text-muted">{{ $invite->expires_at->format('d M Y') }}</td>
+                                <td class="text-muted">{{ $invite->created_at?->format('d M Y') ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $invite->expires_at?->format('d M Y') ?? 'N/A' }}</td>
                                 <td>
                                     <span class="badge rounded-pill" style="background:#fef3c7; color:#92400e;">Pending</span>
                                 </td>
+                                {{--
                                 <td>
                                     <form action="{{ route('staff.invite.resend', $invite->id) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        <button class="btn btn-sm" style="background:#dbeafe; color:#1d4ed8; border-radius:8px; font-size:11px;">
-                                            <i class="fas fa-redo me-1"></i> Resend
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('staff.invite.cancel', $invite->id) }}" method="POST" class="d-inline">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-sm" style="background:#fee2e2; color:#991b1b; border-radius:8px; font-size:11px;">
-                                            <i class="fas fa-times me-1"></i> Cancel
-                                        </button>
-                                    </form>
+                                @csrf
+                                <button class="btn btn-sm" style="background:#dbeafe; color:#1d4ed8; border-radius:8px; font-size:11px;">
+                                    <i class="fas fa-redo me-1"></i> Resend
+                                </button>
+                                </form>
+                                <form action="{{ route('staff.invite.cancel', $invite->id) }}" method="POST" class="d-inline">
+                                    @csrf @method('DELETE')
+                                    <button class="btn btn-sm" style="background:#fee2e2; color:#991b1b; border-radius:8px; font-size:11px;">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </button>
+                                </form>
                                 </td>
+                                --}}
                             </tr>
                             @empty
                             <tr>

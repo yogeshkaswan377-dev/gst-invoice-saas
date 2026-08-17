@@ -126,3 +126,84 @@ Invoice Preferences saves the numeric payment terms, invoice prefix, and quote p
 No more 500 errors or silent refresh loops – all forms display success messages.
 
 The view consistently shows the saved values after reload.
+
+
+The staff invite flow is now fixed.
+The proforma seeding and tax calculation are now working correctly. ✅
+
+Now that the proforma view and listing are fixed and you have seeded proforma data
+
+
+Company Settings (P0 – Critical)
+Missing controller methods
+Added updateSettings(), updateGst(), updatePreferences() (and left updateBank() ready) to CompanyController.
+
+Field‑name mismatches
+Mapped form fields to actual DB columns:
+
+default_gst_rate → stored inside gst_settings JSON
+
+gst_mode → gst_mode_default column
+
+payment_terms → default_payment_terms (integer)
+
+proforma_prefix → quote_prefix
+
+JSON handling error
+Fixed json_decode() TypeError by adding safe type checks and proper casting/accessors.
+
+Integer/string mismatch
+Changed Payment Terms dropdown to send numeric values (15, 30, etc.) instead of text like “Net 15”.
+
+Logo & signature upload missing
+Added file upload inputs for logo/signature in the settings view.
+
+Success & error feedback
+Added validation error displays and success messages so forms show what’s happening.
+
+✅ Staff Invite Module
+Broken sidebar link
+Replaced route('staff.invite') with route('staff.invite.form') in the layout.
+
+Undefined route errors
+Commented out/removed Resend and Cancel buttons that referenced non‑existent routes.
+
+Controller company ID issue
+Updated StaffController to use auth()->user()->currentCompany instead of an unreliable session key.
+
+View variable mismatches
+Fixed variable names passed to the invite view ($teamMembers, $pendingInvitations).
+
+expires_at null error
+Changed date formatting to null‑safe (?->format()) so missing timestamps don’t crash the page.
+
+Invite registration page
+
+Fixed undefined $invitation variable → changed to $invite.
+
+Fixed form action route from invitation.accept to invite.register with the invite token.
+
+✅ Proforma Module
+Show page undefined variable
+Changed ProformaController@show() to pass 'proforma' => $invoice to the view.
+
+Listing showing “No Proformas Found”
+Changed ProformaController@index() to pass 'proformas' instead of 'invoices'.
+
+Missing seeded proforma data
+Created ProformaSeeder to insert a sample proforma invoice.
+
+Proforma seeder type errors
+
+Fixed logistics_details to be null instead of a string.
+
+Fixed TaxBreakdownService to pass the missing cgstAmount, sgstAmount, and igstAmount arguments when creating InvoiceTotals.
+
+Current State
+Company Settings now saves all sections correctly.
+
+Staff invite flow works (send invite, open link, register).
+
+Proformas list and detail pages display correctly.
+
+Proforma data can be seeded without errors.

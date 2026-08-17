@@ -299,6 +299,8 @@ Route::middleware(['auth', 'verified', 'super.admin'])->prefix('super-admin')->n
 Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::get('/staff/invite', [App\Http\Controllers\StaffController::class, 'inviteForm'])->name('staff.invite.form');
     Route::post('/staff/invite', [App\Http\Controllers\StaffController::class, 'sendInvite'])->name('staff.invite.send');
+    //Route::post('/staff/invite/{id}/resend', [App\Http\Controllers\StaffController::class, 'resendInvite'])->name('staff.invite.resend');
+    //Route::delete('/staff/invite/{id}/cancel', [App\Http\Controllers\StaffController::class, 'cancelInvite'])->name('staff.invite.cancel');
 });
 
 // Accept Invite (no company needed)

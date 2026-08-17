@@ -52,6 +52,9 @@ class TaxBreakdownService
             discountAmount: $discountAmount,
             taxableAmount: $taxableAmount,
             totalGst: $taxBreakdown->totalGstAmount,
+            cgstAmount: $taxBreakdown->cgstAmount,
+            sgstAmount: $taxBreakdown->sgstAmount,
+            igstAmount: $taxBreakdown->igstAmount,
             grandTotal: $grandTotal,
             taxBreakdown: $taxBreakdown,
             shippingCharges: $shippingCharges,
@@ -116,9 +119,12 @@ class TaxBreakdownService
 
         return new InvoiceTotals(
             subtotal: $subtotal,
-            discountAmount: 0, // Handled per item
+            discountAmount: 0,
             taxableAmount: $totalBasePrice,
             totalGst: $totalGstAmount,
+            cgstAmount: $taxBreakdown->cgstAmount,
+            sgstAmount: $taxBreakdown->sgstAmount,
+            igstAmount: $taxBreakdown->igstAmount,
             grandTotal: $totalBasePrice + $totalGstAmount,
             taxBreakdown: $taxBreakdown
         );

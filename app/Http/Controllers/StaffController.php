@@ -13,29 +13,42 @@ class StaffController extends Controller
 {
     public function inviteForm()
     {
-        $companyId = session('current_company_id');
-        $staff = User::where('company_id', $companyId)
+        $company = auth()->user()->currentCompany;
+
+        if (!$company) {
+            return redirect()->route('company.select')
+                ->withErrors(['company' => 'Please select a company first.']);
+        }
+
+        $teamMembers = User::where('company_id', $company->id)
             ->whereHas('roles', function ($q) {
                 $q->whereIn('name', ['admin', 'staff']);
             })->get();
-        $invites = CompanyInvite::where('company_id', $companyId)
-            ->whereNull('accepted_at')->get();
 
-        return view('staff.invite', compact('staff', 'invites'));
+        $pendingInvitations = CompanyInvite::where('company_id', $company->id)
+            ->whereNull('accepted_at')
+            ->get();
+
+        return view('staff.invite', compact('teamMembers', 'pendingInvitations'));
     }
 
     public function sendInvite(Request $request)
     {
+        $company = auth()->user()->currentCompany;
+
+        if (!$company) {
+            return back()->withErrors(['company' => 'No company selected.']);
+        }
+
         $request->validate([
             'email' => 'required|email|unique:users,email',
             'role' => 'required|in:admin,staff',
         ]);
 
-        $companyId = session('current_company_id');
         $token = Str::random(64);
 
         CompanyInvite::create([
-            'company_id' => $companyId,
+            'company_id' => $company->id,
             'invited_by' => auth()->id(),
             'email' => $request->email,
             'role' => $request->role,
@@ -44,7 +57,7 @@ class StaffController extends Controller
 
         $link = route('invite.accept', $token);
 
-        // In production, send email with $link
+        // Uncomment to send email when ready
         // Mail::to($request->email)->send(new StaffInviteMail($link));
 
         return back()->with('success', "Invite sent! Link: <a href='{$link}'>{$link}</a>");

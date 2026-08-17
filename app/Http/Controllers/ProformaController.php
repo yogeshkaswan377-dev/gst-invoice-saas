@@ -31,9 +31,9 @@ class ProformaController extends Controller
         $companyId = Auth::user()->current_company_id;
 
         $filters = $request->only(['status', 'date_from', 'date_to', 'search', 'client_id']);
-        $invoices = $this->invoiceService->listProformas($companyId, $filters);
+        $proformas = $this->invoiceService->listProformas($companyId, $filters);
 
-        return view('proformas.index', compact('invoices', 'filters'));
+        return view('proformas.index', compact('proformas', 'filters'));
     }
 
     /**
@@ -113,7 +113,7 @@ class ProformaController extends Controller
 
         Gate::authorize('view', $invoice);
 
-        return view('proformas.show', compact('invoice'));
+        return view('proformas.show', ['proforma' => $invoice]);
     }
 
     /**
@@ -258,7 +258,7 @@ class ProformaController extends Controller
             'invoice_number' => $invoice->invoice_number,
             'sent_to' => $invoice->client->email,
             'user_id' => Auth::id(),
-        ]); 
+        ]);
 
         return back()->with('success', 'Invoice emailed successfully!');
     }

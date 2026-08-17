@@ -595,6 +595,9 @@
             <a href="{{ route('profile.edit') }}" class="nav-item {{ request()->routeIs('profile.*') ? 'active' : '' }}">
                 <i class="fas fa-user"></i> Profile
             </a>
+            <a href="{{ route('staff.invite.form') }}" class="nav-item {{ request()->routeIs('staff.invite.*') ? 'active' : '' }}">
+                <i class="fas fa-user-plus"></i> Staff Invite
+            </a>
         </nav>
 
         <div class="sidebar-footer">
