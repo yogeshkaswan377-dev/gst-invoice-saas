@@ -13,6 +13,10 @@ class StaffController extends Controller
 {
     public function inviteForm()
     {
+        if (!auth()->user()->isOwner()) {
+            abort(403, 'Only company owners can manage staff invitations.');
+        }
+
         $company = auth()->user()->currentCompany;
 
         if (!$company) {
@@ -34,6 +38,10 @@ class StaffController extends Controller
 
     public function sendInvite(Request $request)
     {
+        if (!auth()->user()->isOwner()) {
+            abort(403, 'Only company owners can manage staff invitations.');
+        }
+
         $company = auth()->user()->currentCompany;
 
         if (!$company) {

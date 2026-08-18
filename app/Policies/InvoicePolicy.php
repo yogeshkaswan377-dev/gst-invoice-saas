@@ -17,18 +17,20 @@ class InvoicePolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->hasAnyRole(['owner', 'admin']);
     }
 
     public function update(User $user, Invoice $invoice): bool
     {
         return $user->current_company_id === $invoice->company_id
+            && $user->hasAnyRole(['owner', 'admin'])
             && in_array($invoice->status, ['draft']);
     }
 
     public function delete(User $user, Invoice $invoice): bool
     {
         return $user->current_company_id === $invoice->company_id
+            && $user->hasAnyRole(['owner', 'admin'])
             && in_array($invoice->status, ['draft']);
     }
 

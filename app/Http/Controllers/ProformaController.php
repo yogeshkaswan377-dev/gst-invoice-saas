@@ -41,6 +41,8 @@ class ProformaController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create', Invoice::class);
+
         $company = Company::find(Auth::user()->current_company_id);
         $clients = Client::where('company_id', $company->id)
             ->where('status', 'active')
@@ -54,6 +56,8 @@ class ProformaController extends Controller
      */
     public function store(StoreProformaRequest $request)
     {
+        Gate::authorize('create', Invoice::class);
+
         $companyId = Auth::user()->current_company_id;
 
         $items = collect($request->items)->map(function ($item) {
@@ -143,6 +147,9 @@ class ProformaController extends Controller
      */
     public function update(UpdateProformaRequest $request, int $id)
     {
+        $invoice = $this->invoiceService->getInvoice($id, $companyId);
+        Gate::authorize('update', $invoice);
+
         $companyId = Auth::user()->current_company_id;
 
         $items = collect($request->items)->map(function ($item) {

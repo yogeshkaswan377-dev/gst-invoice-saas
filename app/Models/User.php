@@ -127,4 +127,29 @@ class User extends Authenticatable
     {
         return $this->hasRole('owner', $company->id);
     }
+
+    public function isOwner(): bool
+    {
+        return $this->hasRole('owner');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->hasRole('staff');
+    }
+
+    public function canAccessCompanySettings(): bool
+    {
+        return $this->isOwner();
+    }
+
+    public function canInviteStaff(): bool
+    {
+        return $this->isOwner();
+    }
 }

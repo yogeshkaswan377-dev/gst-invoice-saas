@@ -6,6 +6,7 @@ use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 
 
 class ClientController extends Controller
@@ -23,6 +24,8 @@ class ClientController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Client::class);
+
         $states = config('indian_states.states');
 
         return view('Clients.create', compact('states'));
@@ -30,6 +33,8 @@ class ClientController extends Controller
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Client::class);
+
         $validated = $request->validate([
             'client_type' => 'required|in:individual,business,export',
 
@@ -93,12 +98,14 @@ class ClientController extends Controller
 
     public function edit(Client $client)
     {
+        Gate::authorize('update', $client);
+
         return view('clients.edit', compact('client'));
     }
 
     public function update(Request $request, Client $client)
     {
-        $this->authorize('update', $client);
+        Gate::authorize('update', $client);
 
         $validated = $request->validate([
             'client_type' => 'required|in:individual,business,export',
@@ -156,6 +163,8 @@ class ClientController extends Controller
 
     public function destroy(Client $client)
     {
+        Gate::authorize('delete', $client);
+
         Log::warning('Client deleted', [
             'user_id' => Auth::id(),
             'client_name' => $client->name,

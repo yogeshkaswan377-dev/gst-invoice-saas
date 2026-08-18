@@ -13,6 +13,7 @@ use App\Services\StockService;
 use App\Repositories\Contracts\StockHistoryRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
 {
@@ -36,11 +37,15 @@ class ProductController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Product::class);
+
         return view('products.create');
     }
 
     public function store(StoreProductRequest $request)
     {
+        Gate::authorize('create', Product::class);
+
         $data = new ProductData(
             companyId: Auth::user()->current_company_id,
             itemNo: $request->item_no,
@@ -66,11 +71,15 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
+        Gate::authorize('update', $product);
+
         return view('products.edit', compact('product'));
     }
 
     public function update(UpdateProductRequest $request, Product $product)
     {
+        Gate::authorize('update', $product);
+
         $data = new ProductData(
             companyId: $product->company_id,
             itemNo: $request->item_no,
@@ -96,12 +105,16 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        Gate::authorize('delete', $product);
+
         $this->productService->delete($product);
         return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
 
     public function adjustStock(StockAdjustmentRequest $request, Product $product)
     {
+        Gate::authorize('adjustStock', $product);
+
         $adjustmentData = new StockAdjustmentData(
             productId: $product->id,
             companyId: Auth::user()->current_company_id,

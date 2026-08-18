@@ -207,3 +207,123 @@ Staff invite flow works (send invite, open link, register).
 Proformas list and detail pages display correctly.
 
 Proforma data can be seeded without errors.
+
+
+
+
+Title
+Role-Based Access Control (RBAC) – Missing Real Admin Role, Unauthorized Owner Actions, and Open Permissions
+
+What Type of Bug Was It?
+This was a security/permission leakage issue. Admin and Staff users could perform Owner‑only actions, and there was no real Admin user in the database – the user labeled “admin” actually had the Owner role. Controllers lacked authorization checks, and the sidebar showed restricted links to all users.
+
+The main problems:
+
+Seeder created only two users per company:
+
+admin@… was assigned the owner role.
+
+staff@… was assigned staff.
+
+There was no actual admin user with the admin role.
+
+Controllers had no Gate::authorize calls – any logged‑in user could create, edit, or delete clients, products, invoices, etc.
+
+Missing policies – ProductPolicy didn’t exist; InvoicePolicy gave broad permissions; ClientPolicy existed but wasn’t fully used.
+
+Staff invite page was accessible to everyone – no owner check.
+
+Sidebar showed Settings and Staff Invite to all users – even though only Owners should see them.
+
+All these issues let Admin/Staff perform Owner actions, causing both a security flaw and incorrect UI behaviour.
+
+How We Fixed It (Step by Step)
+1. Fixed the User Seeder (No Real Admin User)
+Problem: UserSeeder assigned the owner role to the user with email admin@…. There was no actual admin‑role user.
+Fix: Updated UserSeeder to create three distinct users per company:
+
+Owner: owner@… with role owner
+
+Admin: admin@… with role admin
+
+Staff: staff@… with role staff
+
+Now the database has a true Admin account with the correct permissions.
+
+2. Added Role Helper Methods to User Model
+Problem: The controllers/views needed a simple way to check if the authenticated user is Owner, Admin, or Staff.
+Fix: Added methods to User model:
+
+isOwner()
+
+isAdmin()
+
+isStaff()
+
+canAccessCompanySettings()
+
+canInviteStaff()
+
+These methods use the existing hasRole() and hasAnyRole() functions.
+
+3. Updated InvoicePolicy
+Problem: InvoicePolicy allowed any authenticated user to create, update, or delete invoices.
+Fix:
+
+create() → allowed only owner and admin.
+
+update() and delete() → allowed only owner and admin (and still require invoice status draft).
+
+view, sendEmail, downloadPdf remain open to all roles (including staff) for read‑only access.
+
+4. Created ProductPolicy
+Problem: There was no policy for products, so any user could create/edit/delete products.
+Fix: Created ProductPolicy with:
+
+viewAny → allowed for all roles (owner, admin, staff).
+
+create, update, delete → allowed only for owner and admin.
+
+adjustStock → allowed only for owner and admin.
+
+5. Added Gate::authorize in Controllers
+Problem: Controllers were missing authorization checks.
+Fix: Added Gate::authorize calls in the relevant controller methods:
+
+ClientController – in create(), store(), and destroy().
+
+ProductController – in create(), store(), edit(), update(), destroy(), and adjustStock().
+
+GSTInvoiceController – in create(), store(), and update().
+
+ProformaController – in create(), store(), and update().
+
+These calls enforce the rules defined in the policies.
+
+6. Restricted Staff Invite to Owner Only
+Problem: Any logged‑in user could access the staff invite page and send invitations.
+Fix: Added a check at the start of StaffController@inviteForm() and @sendInvite():
+
+php
+if (!auth()->user()->isOwner()) {
+    abort(403, 'Only company owners can manage staff invitations.');
+}
+7. Updated Sidebar to Hide Owner-Only Links
+Problem: All users could see “Settings” and “Staff Invite” in the sidebar.
+Fix: Wrapped those two links in a Blade conditional:
+
+blade
+@if(auth()->user()->isOwner())
+    <a href="{{ route('company.settings') }}" class="nav-item ...">Settings</a>
+    <a href="{{ route('staff.invite.form') }}" class="nav-item ...">Staff Invite</a>
+@endif
+Now they only appear for Owners.
+
+Final Outcome
+Owner – Full access to everything, including Settings and Staff Invite.
+
+Admin – Can manage Clients, Products, Invoices (create/edit/delete), but cannot access Company Settings or Staff Invite.
+
+Staff – Read‑only access to most modules (view lists, view invoices, download PDFs) but no create/edit/delete or settings.
+
+The database now has a proper Admin user, the backend enforces permissions via policies and Gate::authorize, and the UI hides restricted links. The RBAC system is fully functional.

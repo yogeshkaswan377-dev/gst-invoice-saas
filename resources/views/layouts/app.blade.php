@@ -589,14 +589,16 @@
             <a href="{{ route('reports.gstr1') }}" class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
                 <i class="fas fa-chart-bar"></i> Reports
             </a>
+            @if(auth()->user()->isOwner())
             <a href="{{ route('company.settings') }}" class="nav-item {{ request()->routeIs('company.*') ? 'active' : '' }}">
                 <i class="fas fa-cog"></i> Settings
             </a>
-            <a href="{{ route('profile.edit') }}" class="nav-item {{ request()->routeIs('profile.*') ? 'active' : '' }}">
-                <i class="fas fa-user"></i> Profile
-            </a>
             <a href="{{ route('staff.invite.form') }}" class="nav-item {{ request()->routeIs('staff.invite.*') ? 'active' : '' }}">
                 <i class="fas fa-user-plus"></i> Staff Invite
+            </a>
+            @endif
+            <a href="{{ route('profile.edit') }}" class="nav-item {{ request()->routeIs('profile.*') ? 'active' : '' }}">
+                <i class="fas fa-user"></i> Profile
             </a>
         </nav>
 

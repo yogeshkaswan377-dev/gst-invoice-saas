@@ -23,23 +23,33 @@ class UserSeeder extends Seeder
         $companies = Company::all();
 
         foreach ($companies as $company) {
-            // Admin / Owner
-            $admin = User::create([
-                'name' => 'Admin ' . $company->name,
-                'email' => 'admin@' . strtolower(str_replace(' ', '', $company->name)) . '.com',
+            $slug = strtolower(str_replace(' ', '', $company->name));
+
+            // Owner
+            $owner = User::create([
+                'name' => 'Owner ' . $company->name,
+                'email' => 'owner@' . $slug . '.com',
                 'password' => Hash::make('password'),
-                'phone' => '98765' . rand(10000, 99999),
                 'company_id' => $company->id,
                 'current_company_id' => $company->id,
             ]);
-            $admin->assignRole('owner', $company->id);
+            $owner->assignRole('owner', $company->id);
+
+            // Admin
+            $admin = User::create([
+                'name' => 'Admin ' . $company->name,
+                'email' => 'admin@' . $slug . '.com',
+                'password' => Hash::make('password'),
+                'company_id' => $company->id,
+                'current_company_id' => $company->id,
+            ]);
+            $admin->assignRole('admin', $company->id);
 
             // Staff
             $staff = User::create([
                 'name' => 'Staff ' . $company->name,
-                'email' => 'staff@' . strtolower(str_replace(' ', '', $company->name)) . '.com',
+                'email' => 'staff@' . $slug . '.com',
                 'password' => Hash::make('password'),
-                'phone' => '98765' . rand(10000, 99999),
                 'company_id' => $company->id,
                 'current_company_id' => $company->id,
             ]);

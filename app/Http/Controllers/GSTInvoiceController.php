@@ -7,6 +7,7 @@ use App\DTOs\InvoiceData;
 use App\DTOs\InvoiceItemData;
 use App\Http\Requests\StoreProformaRequest;
 use App\Http\Requests\UpdateProformaRequest;
+use App\Http\Controllers\invoice;
 use App\Models\Client;
 use App\Models\Company;
 use App\Services\Invoice\GSTInvoiceService;
@@ -35,6 +36,8 @@ class GSTInvoiceController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Invoice::class);
+
         $companyId = Auth::user()->current_company_id;
         $company = Company::find($companyId);
         $clients = Client::where('company_id', $companyId)->where('status', 'active')->get();
@@ -44,6 +47,8 @@ class GSTInvoiceController extends Controller
 
     public function store(StoreProformaRequest $request)
     {
+        Gate::authorize('create', Invoice::class);
+
         $companyId = Auth::user()->current_company_id;
 
         // Handle manual client creation
@@ -144,6 +149,8 @@ class GSTInvoiceController extends Controller
 
     public function update(UpdateProformaRequest $request, int $id)
     {
+        Gate::authorize('update', $this->gstInvoiceService->getInvoice($id, $companyId));
+
         $companyId = Auth::user()->current_company_id;
 
         $items = collect($request->items)->map(function ($item) {
