@@ -8,14 +8,26 @@
         <h1 class="text-xl font-bold text-gray-900">Platform Invoices</h1>
         <p class="text-xs text-gray-500 mt-1">All GST invoices across all tenants.</p>
     </div>
-    <div class="flex items-center gap-2">
-        <select class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
-            <option>All Status</option>
-            <option>Paid</option>
-            <option>Pending</option>
-            <option>Overdue</option>
-        </select>
-        <input type="text" placeholder="Search invoice..." class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500 w-40 transition">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 mb-6">
+        <form method="GET" action="{{ route('super-admin.invoices') }}" class="flex flex-col md:flex-row gap-3 md:items-end">
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Search Invoice</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Invoice #, company, client..."
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Status</label>
+                <select name="status" class="px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+                    <option value="">All Status</option>
+                    @foreach(['draft', 'sent', 'viewed', 'accepted', 'paid', 'overdue', 'partially_paid'] as $status)
+                    <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>{{ ucfirst($status) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700">
+                <i class="fa-solid fa-filter mr-1"></i> Apply
+            </button>
+        </form>
     </div>
 </div>
 
@@ -60,5 +72,11 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Pagination --}}
+    <div class="p-4">
+        {{ $invoices->links() }}
+    </div>
+
 </div>
 @endsection

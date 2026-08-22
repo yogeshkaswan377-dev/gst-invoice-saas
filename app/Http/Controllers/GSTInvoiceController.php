@@ -19,6 +19,7 @@ use App\Mail\InvoiceMail;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Product;
 use Illuminate\Support\Facades\Log;
+use App\Services\AuditService;
 
 class GSTInvoiceController extends Controller
 {
@@ -111,7 +112,7 @@ class GSTInvoiceController extends Controller
         );
 
         $invoice = $this->gstInvoiceService->createGSTInvoice($invoiceData);
-
+        AuditService::log('created', Invoice::class, $invoice->id, 'GST Invoice created');
         return redirect()->route('gst-invoices.show', $invoice->id)
             ->with('success', 'GST Invoice created!');
     }
@@ -189,7 +190,7 @@ class GSTInvoiceController extends Controller
         );
 
         $this->gstInvoiceService->updateGSTInvoice($id, $invoiceData);
-
+        AuditService::log('updated', Invoice::class, $id, 'GST Invoice updated');
         return redirect()->route('gst-invoices.show', $id)
             ->with('success', 'GST Invoice updated!');
     }
@@ -203,6 +204,7 @@ class GSTInvoiceController extends Controller
         }
         Gate::authorize('delete', $invoice);
 
+        AuditService::log('deleted', Invoice::class, $id, 'GST Invoice deleted');
         $this->gstInvoiceService->deleteGSTInvoice($id);   // now handles stock
 
         return redirect()->route('gst-invoices.index')
@@ -262,7 +264,7 @@ class GSTInvoiceController extends Controller
         }
 
         Mail::to($invoice->client->email)->send(new InvoiceMail($invoice));
-
+        AuditService::log('sent', Invoice::class, $invoice->id, 'Invoice email sent');
         return back()->with('success', 'Invoice emailed successfully!');
     }
 }

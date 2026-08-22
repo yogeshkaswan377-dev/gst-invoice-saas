@@ -8,11 +8,37 @@
         <h1 class="text-xl font-bold text-gray-900">Audit Trails</h1>
         <p class="text-xs text-gray-500 mt-1">Track all system-wide actions and changes.</p>
     </div>
-    <div class="flex items-center gap-2">
-        <input type="date" class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500 transition">
-        <input type="date" class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500 transition">
-        <button class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">Filter</button>
-    </div>
+</div>
+
+{{-- Filters --}}
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 mb-6">
+    <form method="GET" action="{{ route('super-admin.audit') }}" class="flex flex-col md:flex-row gap-3 md:items-end">
+        <div class="flex-1">
+            <label class="block text-xs font-semibold text-gray-500 mb-1">Search</label>
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="User or description..."
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1">Action</label>
+            <select name="action" class="px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+                <option value="">All Actions</option>
+                @foreach(['created', 'updated', 'deleted', 'suspended', 'approved', 'sent', 'exported'] as $action)
+                <option value="{{ $action }}" {{ request('action') == $action ? 'selected' : '' }}>{{ ucfirst($action) }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1">From</label>
+            <input type="date" name="from" value="{{ request('from') }}" class="px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 mb-1">To</label>
+            <input type="date" name="to" value="{{ request('to') }}" class="px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+        </div>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700">
+            <i class="fa-solid fa-filter mr-1"></i> Filter
+        </button>
+    </form>
 </div>
 
 <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden">
@@ -23,30 +49,50 @@
                     <th class="px-6 py-4">Action</th>
                     <th class="px-6 py-4">User</th>
                     <th class="px-6 py-4">Model</th>
+                    <th class="px-6 py-4">Description</th>
                     <th class="px-6 py-4">Timestamp</th>
                 </tr>
             </thead>
             <tbody class="text-sm divide-y divide-gray-100 text-gray-600">
+                @forelse($logs ?? [] as $log)
                 <tr class="hover:bg-gray-50/50 transition">
-                    <td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700">Created</span></td>
-                    <td class="px-6 py-4">Admin User</td>
-                    <td class="px-6 py-4 font-mono text-xs text-gray-500">Company #12</td>
-                    <td class="px-6 py-4 text-xs text-gray-400">2026-06-20 14:32:10</td>
+                    <td class="px-6 py-4">
+                        @php
+                        $actionColors = [
+                        'created' => 'bg-emerald-50 text-emerald-700',
+                        'updated' => 'bg-amber-50 text-amber-700',
+                        'deleted' => 'bg-rose-50 text-rose-700',
+                        'suspended' => 'bg-rose-100 text-rose-800',
+                        'approved' => 'bg-emerald-50 text-emerald-700',
+                        'sent' => 'bg-indigo-50 text-indigo-700',
+                        'exported' => 'bg-purple-50 text-purple-700',
+                        ];
+                        $color = $actionColors[$log->action] ?? 'bg-gray-50 text-gray-700';
+                        @endphp
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold {{ $color }}">
+                            {{ ucfirst($log->action) }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">{{ $log->user->name ?? 'System' }}</td>
+                    <td class="px-6 py-4 font-mono text-xs text-gray-500">
+                        {{ class_basename($log->model_type) ?? 'N/A' }} #{{ $log->model_id ?? '' }}
+                    </td>
+                    <td class="px-6 py-4">{{ $log->description ?? '—' }}</td>
+                    <td class="px-6 py-4 text-xs text-gray-400">{{ $log->created_at->format('d M Y H:i:s') }}</td>
                 </tr>
-                <tr class="hover:bg-gray-50/50 transition">
-                    <td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700">Updated</span></td>
-                    <td class="px-6 py-4">Super Admin</td>
-                    <td class="px-6 py-4 font-mono text-xs text-gray-500">Subscription #5</td>
-                    <td class="px-6 py-4 text-xs text-gray-400">2026-06-20 13:15:45</td>
+                @empty
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                        <i class="fa-solid fa-history text-2xl block mb-2 opacity-50"></i>
+                        No audit logs found
+                    </td>
                 </tr>
-                <tr class="hover:bg-gray-50/50 transition">
-                    <td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-50 text-rose-700">Suspended</span></td>
-                    <td class="px-6 py-4">Super Admin</td>
-                    <td class="px-6 py-4 font-mono text-xs text-gray-500">Company #8</td>
-                    <td class="px-6 py-4 text-xs text-gray-400">2026-06-19 10:22:33</td>
-                </tr>
+                @endforelse
             </tbody>
         </table>
+    </div>
+    <div class="p-4">
+        {{ $logs->links() }}
     </div>
 </div>
 @endsection

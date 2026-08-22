@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Gate;
+use App\Services\AuditService;
 
 
 class ClientController extends Controller
@@ -16,10 +17,46 @@ class ClientController extends Controller
         $this->middleware('auth');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $clients = Client::where('company_id', Auth::user()->company_id)->paginate(15);
-        return view('clients.index', compact('clients'));
+        $companyId = Auth::user()->current_company_id;
+
+        $query = Client::where('company_id', $companyId);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('company_name', 'like', "%{$search}%")
+                    ->orWhere('gstin', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // State filter
+        if ($request->filled('state')) {
+            $query->where('state_name', $request->state);
+        }
+
+        // GST registered filter
+        if ($request->filled('has_gst')) {
+            if ($request->has_gst == '1') {
+                $query->whereNotNull('gstin')->where('gstin', '!=', '');
+            } else {
+                $query->where(function ($q) {
+                    $q->whereNull('gstin')->orWhere('gstin', '');
+                });
+            }
+        }
+
+        $clients = $query->orderBy('name')->paginate(15)->withQueryString();
+
+        $states = config('indian_states.states');
+
+        return view('clients.index', compact('clients', 'states'));
     }
 
     public function create()
@@ -87,7 +124,7 @@ class ClientController extends Controller
         $validated['company_id'] = session('current_company_id');
 
         Client::create($validated);
-
+        AuditService::log('created', Client::class, $client->id, 'Client created');
         return redirect()->route('clients.index')->with('success', 'Client created successfully.');
     }
 
@@ -158,6 +195,7 @@ class ClientController extends Controller
 
 
         $client->update($validated);
+        AuditService::log('updated', Client::class, $client->id, 'Client updated');
         return redirect()->route('clients.index')->with('success', 'Client updated successfully.');
     }
 
@@ -171,8 +209,8 @@ class ClientController extends Controller
             'company_id' => $client->company_id,
         ]);
 
+        AuditService::log('deleted', Client::class, $client->id, 'Client deleted');
         $client->delete();
-
         return redirect()->route('clients.index')
             ->with('success', 'Client deleted.');
     }

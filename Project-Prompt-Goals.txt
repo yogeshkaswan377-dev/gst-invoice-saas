@@ -1,0 +1,767 @@
+# Multi-Phase Project Breakdown & AI Chat Coordination Prompt
+
+## Purpose
+Create a modular, phased approach to building the Proforma & GST Invoice SaaS platform that can be distributed across multiple AI chat sessions, with each phase having clear boundaries, dependencies, and handoff protocols.
+
+---
+
+# MASTER PROMPT FOR DISTRIBUTED DEVELOPMENT
+
+```markdown
+I need to build a Proforma & GST Invoice SaaS platform across multiple AI chat sessions. Each phase must be self-contained with clear deliverables, dependencies, and testing requirements.
+
+## PROJECT NAME: GST Invoice SaaS Platform
+
+## TECH STACK (ALL PHASES)
+- Laravel 12, MySQL 8.0+, PHP 8.2+
+- Tailwind CSS, Alpine.js, Blade (Phase 1-3)
+- Laravel Breeze for auth, DOMPDF for PDFs
+- Repository Pattern + Service Layer + DTOs
+
+## ARCHITECTURE RULE (CRITICAL - ALL PHASES)
+**Business logic NEVER in controllers or views.**
+- ALL calculations in Service classes (app/Services/)
+- ALL database operations in Repository pattern (app/Repositories/)
+- ALL data transfer via DTOs (app/DTOs/)
+- Controllers only: validate request → call service → return response
+- This enables Phase 4 (Next.js migration) with ZERO backend changes
+
+---
+
+# PHASE 1: FOUNDATION & AUTHENTICATION
+**Duration: 1 AI Chat Session**
+**Dependencies: None (Starting point)**
+
+## What MUST be built:
+1. Laravel 12 project with all configured packages
+2. Database migrations:
+   - Users (Breeze default + company_id foreign)
+   - Companies table (all fields per spec)
+   - Failed jobs, password resets, cache
+3. Models with relationships:
+   - User (belongsTo Company)
+   - Company (hasMany User, hasMany Client, hasMany Invoice)
+4. Authentication system (Laravel Breeze):
+   - Login/Register
+   - Email verification
+   - Password reset
+5. Role system foundation:
+   - Migration for roles table
+   - User belongsToMany Role (or simpler: role column on users)
+   - Seeder for Owner, Admin, Staff roles
+6. Service structure (empty classes with interfaces):
+   - app/Services/GST/GSTCalculationService.php
+   - app/Services/Invoice/InvoiceService.php
+   - app/Services/NumberGenerator/InvoiceNumberGenerator.php
+7. Repository pattern setup:
+   - app/Repositories/Contracts/*Interface.php
+   - app/Repositories/BaseRepository.php
+   - app/Repositories/CompanyRepository.php
+8. DTOs:
+   - app/DTOs/CompanyData.php
+   - app/DTOs/UserData.php
+9. Basic middleware:
+   - EnsureCompanySelected (redirects to company setup)
+   - CheckPermission middleware
+10. Seeder:
+    - Default company "Demo Business"
+    - Admin user (admin@example.com / password)
+
+## What NOT to build (Phase 2+):
+- NO invoice creation
+- NO client management UI
+- NO GST calculations
+- NO PDF generation
+
+## Deliverables:
+- Working authentication
+- User can register/login
+- User can create/select company after login
+- Basic dashboard placeholder
+- All service skeletons with proper namespaces
+
+## Testing Required:
+- Registration flow test
+- Login test
+- Company creation test
+- Role assignment test
+
+## Handoff to Phase 2:
+- Database populated with test company
+- User ID and Company ID known
+- Service classes exist (empty but callable)
+
+---
+
+# PHASE 2: COMPANY & CLIENT MANAGEMENT
+**Duration: 1 AI Chat Session**
+**Dependencies: Phase 1 complete**
+
+## What MUST be built:
+1. Company Settings Module:
+   - CRUD for company profile
+   - Logo upload (storage, resize)
+   - Signature upload
+   - Bank details management (JSON field)
+   - GST settings:
+     - Company GSTIN validation
+     - Default GST mode (exclusive/inclusive)
+     - Default GST rates (configurable, default 18%)
+   - Invoice preferences:
+     - Invoice prefix (e.g., "INV-")
+     - Quote prefix ("Q-")
+     - Default payment terms ("Net 15")
+   - State selection dropdown (Indian states with codes)
+
+2. Client Management:
+   - Migration for clients table (per spec)
+   - ClientRepository with CRUD
+   - ClientService with validation
+   - Form Requests: StoreClientRequest, UpdateClientRequest
+   - Client DTOs
+   - Controllers (thin):
+     - ClientController (index, create, store, edit, update, destroy)
+     - API ClientController for future (stubbed)
+   - Views:
+     - Client listing with search (Alpine.js live search)
+     - Client form with GSTIN validation
+     - Client details page with invoice history placeholder
+
+3. GST Validation Service:
+   - GSTValidationService with methods:
+     - validateGSTIN(string $gstin): bool (format: 15 chars, pattern)
+     - extractStateFromGSTIN(string $gstin): string|null
+     - verifyWithGovAPI (stubbed for Phase 3)
+
+4. Place of Supply Logic:
+   - Determine POS based on:
+     - Client state (same state as company? intra → POS = client state)
+     - Different state? inter → POS = client state
+     - Special cases: export (POS = outside India)
+
+5. JavaScript Components:
+   - State dropdown with search
+   - GSTIN formatter/validator (live)
+   - Logo preview on upload
+
+## What NOT to build (Phase 3+):
+- NO invoice creation
+- NO item management
+- NO tax calculations on invoices
+- NO PDF generation
+
+## Deliverables:
+- Complete company settings (all fields editable)
+- Client CRUD fully functional
+- Client list with search
+- GSTIN validation (client and company)
+- State-based logic foundations
+
+## Testing Required:
+- Company update test
+- Client CRUD tests
+- GSTIN validator tests (valid/invalid formats)
+- State code extraction from GSTIN
+
+## Handoff to Phase 3:
+- At least 3 test clients (2 same-state, 1 different-state)
+- Company with all settings configured
+- ClientRepository fully tested
+
+---
+
+# PHASE 3: GST CALCULATION ENGINE (CORE)
+**Duration: 2 AI Chat Sessions (Split into Sub-phases)**
+**Dependencies: Phase 2 complete**
+
+## SUB-PHASE 3A: GST ENGINE - PURE CALCULATIONS
+**(No database, no UI, just business logic)**
+
+### What MUST be built:
+1. **GSTCalculationService.php** (Complete):
+   ```php
+   // Core methods to implement:
+   calculateExclusiveGST($basePrice, $sellerState, $buyerState, $gstRate = 18)
+   calculateInclusiveGST($inclusivePrice, $sellerState, $buyerState, $gstRate = 18)
+   determineTaxType($sellerState, $buyerState) // Returns 'cgst_sgst' or 'igst'
+   splitGSTIntoCGS TSGST($totalGSTAmount) // Returns ['cgst' => X, 'sgst' => Y]
+   calculateItemGST($itemPrice, $quantity, $discount, $mode, $sellerState, $buyerState, $gstRate = 18)
+   ```
+
+2. **TaxBreakdownService.php**:
+   - Calculate tax breakdown for invoice
+   - Handle partial payments and tax allocation
+   - Reverse charge mechanism (buyer pays tax)
+
+3. **DTOs**:
+   - TaxBreakdown (with all fields: taxType, taxableValue, cgstAmount, sgstAmount, igstAmount, totalGST, rates)
+   - InvoiceTotals (subtotal, discount, taxable, gst, grand_total)
+
+4. **Unit Tests for GST Engine** (MANDATORY):
+   - Test exclusive mode: 1000 + 18% = 1180
+   - Test inclusive mode: 1180 → base 1000, GST 180
+   - Test intra-state: 18% → 9% CGST + 9% SGST
+   - Test inter-state: 18% → 18% IGST
+   - Test edge cases: 0% GST, negative prices, invalid states
+   - Test precision: 2 decimal places rounding
+
+### What NOT to build:
+- NO database saving yet
+- NO UI components
+- NO invoice creation flow
+
+### Deliverables:
+- Fully tested GST calculation engine (100% unit test coverage)
+- All DTOs defined
+- Service methods return proper arrays/DTOs
+
+### Testing Required:
+- Run `php artisan test --filter=GST`
+- All calculations must match government formula
+
+### Handoff to 3B:
+- GSTCalculationService passes all tests
+- TaxBreakdown DTO verified
+
+---
+
+## SUB-PHASE 3B: INVOICE DATABASE & ITEMS
+**(Storage layer for invoices)**
+
+### What MUST be built:
+1. **Migrations**:
+   - invoices table (per spec with ALL financial fields)
+   - invoice_items table (per spec)
+   - invoice_payments table (per spec)
+
+2. **Models with casts**:
+   - Invoice (casts: metadata=>array, dates)
+   - InvoiceItem
+   - InvoicePayment
+
+3. **Repositories**:
+   - InvoiceRepositoryInterface + implementation
+   - Methods: create, update, findByNumber, getByStatus, getOverdue, getByClient, getByDateRange
+
+4. **Services**:
+   - InvoiceNumberGenerator:
+     - generateInvoiceNumber(companyId): string (format: PREFIX-YYYY-XXXXX)
+     - generateQuoteNumber(companyId): string (format: Q-YYYY-XXXXX)
+     - SequenceManager for tracking last numbers
+   - InvoiceStateManager:
+     - Status transitions (draft→sent→viewed→accepted→paid)
+     - Validation rules for each transition
+
+5. **Item Line Logic**:
+   - Calculate item totals (with discount)
+   - Apply GST per item (support both modes)
+   - HSN/SAC code validation (basic format)
+
+### What NOT to build:
+- NO invoice UI yet
+- NO PDF generation
+
+### Deliverables:
+- Can create invoice record (via tinker or seeder)
+- Invoice numbers auto-generate
+- Items calculate correctly
+- Status transitions work
+
+### Testing Required:
+- Invoice creation test (with items)
+- Invoice number uniqueness test
+- Status transition test
+- Overdue detection test
+
+### Handoff to Phase 4:
+- Database ready for invoice storage
+- All repository methods tested
+
+---
+
+# PHASE 4: INVOICE UI & LIVE CALCULATIONS
+**Duration: 2 AI Chat Sessions**
+**Dependencies: Phase 3 complete**
+
+## SUB-PHASE 4A: PROFORMA INVOICE MODULE
+
+### What MUST be built:
+1. **Controllers & Form Requests**:
+   - ProformaController (index, create, store, show, edit, update, destroy)
+   - StoreProformaRequest (validation rules per spec)
+   - UpdateProformaRequest
+
+2. **InvoiceService Methods**:
+   - createProforma(InvoiceData $data): Invoice
+   - updateProforma($id, InvoiceData $data): Invoice
+   - calculateTotals(InvoiceData $data): InvoiceTotals
+
+3. **Alpine.js Component: InvoiceBuilder**:
+   - Dynamic item rows (add/remove/clone)
+   - Product search (stubbed for Phase 5)
+   - Live calculation on ANY input change:
+     - Quantity change → recalc item
+     - Price change → recalc item
+     - Discount change → recalc item
+     - GST rate change → recalc ALL items
+   - Real-time totals display
+
+4. **Blade Views**:
+   - Proforma listing (filter by status, date range)
+   - Create/Edit proforma (full page with Alpine component)
+   - Show proforma (print-friendly)
+   - Proforma PDF view (A4 layout)
+
+5. **Discount Logic**:
+   - Percentage discount (apply to subtotal)
+   - Fixed amount discount
+   - Per-item discount support
+
+6. **Additional Fields**:
+   - Shipping charges
+   - Commission
+   - Payment terms (dropdown + custom)
+   - Logistics details
+   - Estimated delivery date picker
+
+### What NOT to build:
+- NO GST invoice yet (Phase 4B)
+- NO PDF generation with GST (just placeholder)
+
+### Deliverables:
+- Complete proforma invoice workflow
+- Live calculations working
+- Can save draft proforma
+- Can convert proforma to GST invoice (button, stubbed for 4B)
+
+### Testing Required:
+- Proforma creation test (UI + backend)
+- Calculation accuracy test
+- Discount application test
+
+---
+
+## SUB-PHASE 4B: GST INVOICE MODULE (WITH BOTH GST MODES)
+
+### What MUST be built:
+1. **GSTInvoiceController** (extends base invoice functionality)
+2. **GSTInvoiceService**:
+   - createGSTInvoice(InvoiceData $data): Invoice
+   - recalculateWithMode($invoiceId, $mode): Invoice (switch between exclusive/inclusive)
+   - extractGSTForDisplay($invoiceId): TaxBreakdown
+
+3. **Alpine.js Enhancements**:
+   - GST mode toggle (exclusive/inclusive) with ONE-CLICK recalculation of ALL items
+   - Tax breakdown display (CGST, SGST, IGST)
+   - Place of supply auto-fill from client
+   - Reverse charge checkbox
+   - HSN/SAC code validation (8 characters, required)
+
+4. **Real-time State Logic**:
+   - When client selected → AJAX fetches client state
+   - Compare with company state
+   - Auto-determine CGST/SGST vs IGST
+   - Update tax breakdown display
+   - Show warning if states differ (IGST applied)
+
+5. **GST Mode Support**:
+   - **Exclusive mode**: User enters base price, GST added
+   - **Inclusive mode**: User enters final price, GST extracted
+   - Store BOTH values (unit_price AND original_unit_price)
+   - Audit trail for tax extraction
+
+6. **Invoice Numbering**:
+   - Separate sequence for GST invoices vs Proforma
+   - IRN (Invoice Reference Number) placeholder for future e-invoicing
+
+7. **Blade Views**:
+   - GST Invoice listing with GST summary column
+   - Create/Edit GST invoice (with mode toggle)
+   - Show GST invoice (detailed tax breakdown)
+   - Print view with digital signature placeholder
+
+### Deliverables:
+- Complete GST invoice workflow
+- Both exclusive AND inclusive modes working
+- Automatic tax type determination
+- All GST fields calculated correctly
+- Invoice PDF with tax breakdown
+
+### Testing Required:
+- Create GST invoice (exclusive mode) test
+- Create GST invoice (inclusive mode) test
+- Mode switch recalculation test
+- State-based tax type test
+- GST extraction accuracy test (inclusive mode)
+
+---
+
+# PHASE 5: PDF GENERATION & REPORTS
+**Duration: 1 AI Chat Session**
+**Dependencies: Phase 4 complete**
+
+## What MUST be built:
+1. **PDFGenerationService**:
+   ```php
+   generateInvoicePDF($invoiceId, $type='download'): PDF
+   generateBulkPDF($invoiceIds): ZIP
+   streamPDF($invoiceId): Response (browser preview)
+   attachPDFToEmail($invoiceId): Mail attachment
+   ```
+
+2. **PDF Templates** (2 layouts):
+   - Proforma layout (header: "PROFORMA INVOICE")
+   - GST Invoice layout (header: "TAX INVOICE")
+   - Both A4, professional styling, company logo
+
+3. **InvoicePDFRenderer**:
+   - Blade to PDF conversion
+   - Handle remote images (logo)
+   - QR code generation for UPI payment
+   - Digital signature rendering
+
+4. **GST Invoice PDF Requirements**:
+   - Show calculation mode used (Exclusive: "GST added" / Inclusive: "GST included")
+   - For inclusive mode: Show breakdown "Base ₹X + GST ₹Y = Total ₹Z"
+   - CGST/SGST/IGST split with rates
+   - HSN/SAC column
+   - Place of supply
+   - Reverse charge indicator
+   - QR code for payment
+
+5. **Reporting Module**:
+   - **GSTReportService**:
+     - generateMonthlySummary($companyId, $month, $year): array
+     - generateQuarterlyGSTReturn($companyId, $quarter): array
+     - generateGSTR1($companyId, $month, $year): array (B2B, B2C, exports)
+   - **SalesReportService**:
+     - getOutstandingInvoices($companyId): collection
+     - getPaymentCollection($dateRange): collection
+   - **Export Service**:
+     - exportToCSV($reportData, $filename)
+     - Excel export (PhpSpreadsheet for future)
+
+6. **Report Views**:
+   - Dashboard with charts (Chart.js)
+   - GST summary page (filter by month/quarter)
+   - Outstanding invoices list
+   - Export buttons (CSV, PDF)
+
+### Deliverables:
+- Professional PDF generation for ALL invoice types
+- Both modes display correctly in PDF
+- Monthly GST reports
+- Export functionality
+- Dashboard charts
+
+### Testing Required:
+- PDF content test (contains correct GST amounts)
+- QR code generation test
+- Report accuracy test (sum of invoices matches report)
+
+---
+
+# PHASE 6: EMAIL, SETTINGS & POLISHING
+**Duration: 1 AI Chat Session**
+**Dependencies: Phase 5 complete**
+
+## What MUST be built:
+1. **Email System**:
+   - Mail classes: InvoiceMail, ProformaMail, OverdueReminderMail
+   - Queue implementation (Redis/database)
+   - Email template editor (basic HTML)
+   - Send invoice email with PDF attachment
+   - Bulk email sending (with rate limiting)
+
+2. **Invoice Template Manager**:
+   - Template table (per spec)
+   - Save custom templates
+   - Default template selection
+   - Color scheme customization
+
+3. **Advanced Settings**:
+   - Email settings (SMTP config in .env, UI to test)
+   - Tax settings (default rates per HSN code)
+   - Payment gateway settings (Razorpay keys - stubbed)
+   - Invoice terms & conditions editor
+
+4. **Dashboard Enhancements**:
+   - Widgets: Total revenue (month), Pending amount, Overdue count
+   - Recent invoices (with quick actions)
+   - GST summary chart (monthly trend)
+   - Quick create invoice button
+
+5. **User Experience**:
+   - Toast notifications (Alpine.js)
+   - Confirmation dialogs for destructive actions
+   - Loading states (skeleton screens)
+   - Keyboard shortcuts (Ctrl+S to save)
+
+6. **Security**:
+   - Laravel Policies:
+     - InvoicePolicy (user can only access own company invoices)
+     - ClientPolicy
+     - CompanyPolicy (owner only can edit)
+   - Rate limiting on API routes
+   - Logging for critical actions (invoice delete)
+
+### Deliverables:
+- Complete email workflow
+- Template customization
+- Fully functional dashboard
+- Security policies applied
+- Production-ready application
+
+### Testing Required:
+- Email sending test (queue)
+- Policy authorization test
+- Rate limiting test
+- Performance test (1000 invoices)
+
+---
+
+# PHASE 7: API PREPARATION (FOR NEXT.JS MIGRATION)
+**Duration: 1 AI Chat Session**
+**Dependencies: All previous phases**
+
+## What MUST be built:
+1. **API Routes** (routes/api.php):
+   - Prefix: /api/v1
+   - Sanctum authentication
+   - Resources for all entities
+
+2. **API Controllers**:
+   - Api/V1/InvoiceController (index, store, show, update, destroy)
+   - Api/V1/ClientController
+   - Api/V1/ReportController
+   - **CRITICAL**: These call the SAME Service classes as web controllers
+
+3. **JSON Resources**:
+   - InvoiceResource (with relationships)
+   - ClientResource
+   - TaxBreakdownResource
+   - All resources use DTOs internally
+
+4. **API Transformations**:
+   - Transform DTOs to JSON responses
+   - Include meta data (pagination, filters)
+   - Consistent error format (RFC 7807)
+
+5. **API Documentation**:
+   - Postman collection export
+   - OpenAPI/Swagger YAML (optional but recommended)
+   - Example requests/responses
+
+6. **CORS Configuration**:
+   - Allow Next.js frontend domain
+   - Allow credentials
+   - Proper headers
+
+7. **Rate Limiting** (API-specific):
+   - 60 requests per minute (authenticated)
+   - 120 requests per minute for paid plans (stubbed)
+
+### Deliverables:
+- Complete REST API for all features
+- API authentication (Sanctum tokens)
+- Next.js can now consume the backend
+- Web frontend still works (backward compatible)
+
+### Testing Required:
+- API endpoint tests (all CRUD operations)
+- Authentication test
+- Rate limiting test
+- CORS preflight test
+
+### Handoff to Frontend Team:
+- API documentation
+- Postman collection
+- All DTOs as TypeScript interfaces (can generate)
+
+---
+
+# PHASE 8: PRODUCTION DEPLOYMENT & MONITORING
+**Duration: 1 AI Chat Session**
+**Dependencies: Phase 7 complete**
+
+## What MUST be built:
+1. **Deployment Script**:
+   - bash deploy.sh (pull, migrate, seed, optimize, restart queue)
+   - Environment check script
+   - Backup script (database + storage)
+
+2. **Queue Configuration**:
+   - Supervisor config for queue worker
+   - Failed job handling
+   - Retry logic (3 attempts, exponential backoff)
+
+3. **Scheduler Setup**:
+   - Command: invoices:mark-overdue (daily)
+   - Command: reports:generate-monthly (first day of month)
+   - Command: backup:run (daily)
+   - Command: test:email-queue (every 5 mins, check health)
+
+4. **Monitoring**:
+   - Laravel Telescope (for debugging, disable in production? or enable for admins)
+   - Log rotation (daily, keep 30 days)
+   - Health check endpoint (/health returns 200 if app is ok)
+
+5. **Optimization**:
+   - Config caching (php artisan config:cache)
+   - Route caching
+   - View caching
+   - Octane (optional, for high performance)
+
+6. **Error Handling**:
+   - Custom exception handler (API friendly)
+   - Slack/Discord notifications for critical errors
+   - User-friendly error pages (403, 404, 500)
+
+7. **Documentation**:
+   - README with setup steps (per spec)
+   - API authentication guide
+   - Deployment checklist
+   - Troubleshooting guide
+
+### Deliverables:
+- Production-ready deployment
+- Automated backups
+- Monitoring in place
+- Complete documentation
+
+### Testing Required:
+- Deployment test on fresh server
+- Backup restoration test
+- Queue worker restarts after failure
+- Scheduler test (dry run)
+
+---
+
+# COORDINATION PROTOCOL FOR MULTIPLE AI CHATS
+
+## Session Handoff Template:
+```
+## HANDOFF FROM PHASE [X] TO PHASE [X+1]
+
+### Completed Deliverables:
+- [List completed files/features]
+
+### Database State:
+- Current migrations: [list]
+- Seeders run: [yes/no]
+- Sample data available: [yes/no]
+
+### Known Issues:
+- [Issues to be fixed in next phase]
+
+### Dependencies Installed:
+- [Packages and versions]
+
+### Environment Variables Needed:
+- [List .env variables]
+
+### Next Phase Requirements:
+- [Specific data or state needed]
+
+### Git Branch/Tag:
+- [branch name or commit hash]
+```
+
+## Cross-Phase Validation Checklist:
+Before starting any phase, verify:
+1. Previous phase deliverables exist
+2. Database schema matches expected
+3. Service classes are in correct namespaces
+4. No business logic in controllers (audit if needed)
+5. Tests from previous phase pass
+
+## Emergency Rollback Plan:
+If a phase breaks previous functionality:
+1. Revert to previous git tag
+2. Restore database from backup (before this phase)
+3. Report specific breaking changes
+4. Re-attempt phase with additional test coverage
+
+---
+
+# FINAL DELIVERABLES CHECKLIST
+
+## Complete Application Features:
+- [x] User authentication with roles
+- [x] Company management with GST settings
+- [x] Client CRUD with GSTIN validation
+- [x] Proforma invoices (no GST required)
+- [x] GST invoices with BOTH exclusive/inclusive modes
+- [x] Automatic CGST/SGST vs IGST determination
+- [x] Dynamic item rows with live calculations
+- [x] PDF generation (both invoice types)
+- [x] Email sending with PDF attachments
+- [x] Reports (GST summary, sales, outstanding)
+- [x] Dashboard with charts
+- [x] REST API ready for Next.js
+- [x] Production deployment scripts
+
+## Code Quality:
+- [x] Service layer with all business logic
+- [x] Repository pattern implemented
+- [x] DTOs for all data transfer
+- [x] Form requests with validation
+- [x] Policies for authorization
+- [x] Unit tests (minimum 80% coverage for services)
+- [x] Feature tests for critical paths
+
+## Documentation:
+- [x] API documentation (Postman/OpenAPI)
+- [x] Deployment guide
+- [x] User manual (basic)
+- [x] Developer setup guide
+
+---
+
+# START IMMEDIATELY WITH PHASE 1
+
+Provide the complete code for Phase 1 as specified above. Ensure:
+1. All file paths are correct
+2. Namespaces match PSR-4
+3. No business logic in controllers
+4. All service classes are stubbed correctly
+5. Migrations are reversible (down method)
+6. Seeders create test data
+
+After Phase 1, I will provide the handoff data to continue with Phase 2 in a new chat session.
+```
+
+---
+
+# HOW TO USE THIS PROMPT
+
+1. **Copy the entire prompt above** into your first AI chat
+
+2. **The AI will generate Phase 1 code** (Foundation & Authentication)
+
+3. **After Phase 1 completes**, save the handoff data they provide
+
+4. **Start a new chat** and paste:
+   ```
+   Continue from Phase 2. Here's the handoff from Phase 1:
+   [paste handoff data from previous chat]
+   ```
+
+5. **Repeat for each phase**
+
+6. **After Phase 8**, you have a complete production-ready application
+
+## Key Benefits of This Approach:
+- **Modular**: Each phase is independent
+- **Testable**: Each phase has validation criteria
+- **Recoverable**: If a phase fails, rollback to previous phase
+- **Parallelizable**: Different developers can work on different phases
+- **Budget-friendly**: Pay only for phases you need
+
+## Critical Reminders for Each Chat:
+- **NEVER** put business logic in controllers
+- **ALWAYS** use DTOs for data transfer
+- **TEST** before claiming completion
+- **DOCUMENT** handoff data
+
+This prompt ensures every AI chat understands exactly what to build, what NOT to build, and how to hand off to the next phase.

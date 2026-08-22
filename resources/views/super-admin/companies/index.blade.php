@@ -8,10 +8,21 @@
         <h1 class="text-xl font-bold text-gray-900">Registered Companies</h1>
         <p class="text-xs text-gray-500 mt-1">Manage tenant organizations, metrics allocation, and accounts.</p>
     </div>
-    <div class="flex items-center gap-2">
-        <input type="text" placeholder="Search company..." class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500 w-48 transition">
-        <a href="/super-admin/companies/create" class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 shadow-sm transition">Add Company</a>
-    </div>
+    {{-- REMOVED Add Company button --}}
+</div>
+
+{{-- Search Form --}}
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 mb-6">
+    <form method="GET" action="{{ route('super-admin.companies') }}" class="flex flex-col md:flex-row gap-3 md:items-end">
+        <div class="flex-1">
+            <label class="block text-xs font-semibold text-gray-500 mb-1">Search Company</label>
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Name, email, GSTIN, city..."
+                class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+        </div>
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700">
+            <i class="fa-solid fa-filter mr-1"></i> Apply
+        </button>
+    </form>
 </div>
 
 <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden">
@@ -57,23 +68,29 @@
                     <td class="px-6 py-4 text-xs text-gray-400">{{ $company->created_at->format('d M Y') }}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="inline-flex items-center gap-1">
-                            <a href="/super-admin/companies/{{ $company->id }}" class="p-2 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition" title="View">
+                            <a href="{{ route('super-admin.companies.show', $company) }}" class="p-2 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition" title="View">
                                 <i class="fa-solid fa-eye"></i>
                             </a>
-                            <a href="/super-admin/companies/{{ $company->id }}/users" class="p-2 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-gray-50 transition" title="Users">
+                            <a href="{{ route('super-admin.companies.users', $company) }}" class="p-2 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-gray-50 transition" title="Users">
                                 <i class="fa-solid fa-users"></i>
                             </a>
-                            <a href="/super-admin/companies/{{ $company->id }}/invoices" class="p-2 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-gray-50 transition" title="Invoices">
+                            <a href="{{ route('super-admin.companies.invoices', $company) }}" class="p-2 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-gray-50 transition" title="Invoices">
                                 <i class="fa-solid fa-file-invoice"></i>
                             </a>
                             @if($company->is_active)
-                            <button class="p-2 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-gray-50 transition" title="Suspend">
-                                <i class="fa-solid fa-ban"></i>
-                            </button>
+                            <form action="{{ route('super-admin.companies.suspend', $company) }}" method="POST" onsubmit="return confirm('Suspend this company?');">
+                                @csrf
+                                <button type="submit" class="p-2 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-gray-50 transition" title="Suspend">
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>
+                            </form>
                             @else
-                            <button class="p-2 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-gray-50 transition" title="Activate">
-                                <i class="fa-solid fa-circle-check"></i>
-                            </button>
+                            <form action="{{ route('super-admin.companies.approve', $company) }}" method="POST" onsubmit="return confirm('Activate this company?');">
+                                @csrf
+                                <button type="submit" class="p-2 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-gray-50 transition" title="Activate">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </button>
+                            </form>
                             @endif
                         </div>
                     </td>
@@ -82,12 +99,15 @@
                 <tr>
                     <td colspan="7" class="px-6 py-12 text-center text-gray-400">
                         <i class="fa-solid fa-inbox text-2xl block mb-2 opacity-50"></i>
-                        No companies registered yet
+                        No companies found
                     </td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+    <div class="p-4">
+        {{ $companies->links() }}
     </div>
 </div>
 @endsection

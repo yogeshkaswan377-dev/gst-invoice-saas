@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
+use App\Services\AuditService;
 
 class StaffController extends Controller
 {
@@ -67,7 +68,10 @@ class StaffController extends Controller
 
         // Uncomment to send email when ready
         // Mail::to($request->email)->send(new StaffInviteMail($link));
-
+        AuditService::log('created', CompanyInvite::class, $invite->id, 'Staff invitation sent', [
+            'email' => $request->email,
+            'role' => $request->role,
+        ]);
         return back()->with('success', "Invite sent! Link: <a href='{$link}'>{$link}</a>");
     }
 
@@ -96,7 +100,9 @@ class StaffController extends Controller
 
         $user->assignRole($invite->role, $invite->company_id);
         $invite->update(['accepted_at' => now()]);
-
+        AuditService::log('created', User::class, $user->id, 'Staff registered via invite', [
+            'invite_id' => $invite->id,
+        ]);
         auth()->login($user);
         session(['current_company_id' => $invite->company_id]);
 

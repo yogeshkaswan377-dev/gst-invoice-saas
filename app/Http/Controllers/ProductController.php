@@ -14,6 +14,7 @@ use App\Repositories\Contracts\StockHistoryRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use App\Services\AuditService;
 
 class ProductController extends Controller
 {
@@ -65,7 +66,7 @@ class ProductController extends Controller
         );
 
         $this->productService->create($data);
-
+        AuditService::log('created', Product::class, $product->id, 'Product created');
         return redirect()->route('products.index')->with('success', 'Product created successfully!');
     }
 
@@ -99,7 +100,7 @@ class ProductController extends Controller
         );
 
         $this->productService->update($product, $data);
-
+        AuditService::log('updated', Product::class, $product->id, 'Product updated');
         return redirect()->route('products.index')->with('success', 'Product updated.');
     }
 
@@ -107,6 +108,7 @@ class ProductController extends Controller
     {
         Gate::authorize('delete', $product);
 
+        AuditService::log('deleted', Product::class, $product->id, 'Product deleted');
         $this->productService->delete($product);
         return redirect()->route('products.index')->with('success', 'Product deleted.');
     }
@@ -126,6 +128,10 @@ class ProductController extends Controller
 
         try {
             $this->stockService->adjustStock($adjustmentData);
+            AuditService::log('updated', Product::class, $product->id, 'Stock adjusted', [
+                'type' => $request->adjustment_type,
+                'quantity' => $request->quantity,
+            ]);
             return redirect()->route('products.index')->with('success', 'Stock adjusted.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);

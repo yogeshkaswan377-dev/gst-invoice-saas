@@ -5,12 +5,27 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use App\Services\AuditService;
 
 class CompanyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $companies = Company::withCount('users')->paginate(20);
+        $query = Company::query()->withCount('users');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('gstin', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%")
+                    ->orWhere('state', 'like', "%{$search}%");
+            });
+        }
+
+        $companies = $query->paginate(20)->withQueryString();
+
         return view('super-admin.companies.index', compact('companies'));
     }
 
@@ -23,12 +38,14 @@ class CompanyController extends Controller
 
     public function approve(Company $company)
     {
+        AuditService::log('approved', get_class($company), $company->id, 'Company approved');
         $company->update(['is_active' => 1]);
         return back()->with('success', 'Company approved!');
     }
 
     public function suspend(Company $company)
     {
+        AuditService::log('suspended', get_class($company), $company->id, 'Company suspended');
         $company->update(['is_active' => 0]);
         return back()->with('success', 'Company suspended!');
     }

@@ -21,7 +21,9 @@ class User extends Authenticatable
         'company_id',
         'current_company_id',
         'permissions',
-        'timezone'
+        'timezone',
+        'is_active',
+        'profile_photo_path',
     ];
 
     protected $hidden = [
@@ -35,6 +37,7 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     // Relationships
@@ -151,5 +154,14 @@ class User extends Authenticatable
     public function canInviteStaff(): bool
     {
         return $this->isOwner();
+    }
+
+    public function getProfilePhotoUrlAttribute(): string
+    {
+        if ($this->profile_photo_path) {
+            return asset('storage/' . $this->profile_photo_path);
+        }
+
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=3b82f6&color=fff&size=100';
     }
 }

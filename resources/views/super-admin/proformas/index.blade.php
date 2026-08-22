@@ -8,8 +8,17 @@
         <h1 class="text-xl font-bold text-gray-900">Proforma Invoices</h1>
         <p class="text-xs text-gray-500 mt-1">Platform-wide proforma invoice registry.</p>
     </div>
-    <div class="flex items-center gap-2">
-        <input type="text" placeholder="Search proformas..." class="px-3 py-1.5 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500 w-48 transition">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 mb-6">
+        <form method="GET" action="{{ route('super-admin.proformas') }}" class="flex gap-3 md:items-end">
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Search Proforma</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Proforma #, company, client..."
+                    class="w-full px-3 py-2 bg-gray-50 border border-gray-200 text-sm rounded-lg focus:outline-none focus:border-indigo-500">
+            </div>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700">
+                <i class="fa-solid fa-filter mr-1"></i> Apply
+            </button>
+        </form>
     </div>
 </div>
 
@@ -54,5 +63,11 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Pagination --}}
+    <div class="p-4">
+        {{ $proformas->links() }}
+    </div>
+
 </div>
 @endsection

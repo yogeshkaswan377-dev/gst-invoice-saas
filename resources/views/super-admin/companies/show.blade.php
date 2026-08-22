@@ -20,10 +20,16 @@
         </div>
     </div>
     <div class="flex items-center gap-2">
-        @if($company->is_active ?? true)
-        <button class="px-4 py-1.5 bg-rose-50 text-rose-700 text-sm font-semibold rounded-lg hover:bg-rose-100 transition">Suspend</button>
+        @if($company->is_active)
+        <form action="{{ route('super-admin.companies.suspend', $company) }}" method="POST" onsubmit="return confirm('Suspend this company?');">
+            @csrf
+            <button type="submit" class="px-4 py-1.5 bg-rose-50 text-rose-700 text-sm font-semibold rounded-lg hover:bg-rose-100 transition">Suspend</button>
+        </form>
         @else
-        <button class="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-lg hover:bg-emerald-100 transition">Activate</button>
+        <form action="{{ route('super-admin.companies.approve', $company) }}" method="POST" onsubmit="return confirm('Activate this company?');">
+            @csrf
+            <button type="submit" class="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-lg hover:bg-emerald-100 transition">Activate</button>
+        </form>
         @endif
     </div>
 </div>

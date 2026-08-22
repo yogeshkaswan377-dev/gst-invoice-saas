@@ -29,8 +29,8 @@
                 <label class="form-label fw-semibold" style="font-size:12px;">State</label>
                 <select name="state" class="form-select" style="border-radius:10px; border:1px solid #e2e8f0;" onchange="this.form.submit()">
                     <option value="">All States</option>
-                    @foreach(['Maharashtra','Delhi','Karnataka','Gujarat','Tamil Nadu','Rajasthan'] as $state)
-                    <option value="{{ $state }}" {{ request('state') == $state ? 'selected' : '' }}>{{ $state }}</option>
+                    @foreach($states ?? [] as $code => $name)
+                    <option value="{{ $name }}" {{ request('state') == $name ? 'selected' : '' }}>{{ $name }}</option>
                     @endforeach
                 </select>
             </div>

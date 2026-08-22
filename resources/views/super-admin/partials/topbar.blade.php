@@ -9,7 +9,13 @@
     <div class="flex items-center gap-4" x-data="{ profileDropdown: false }">
         <div class="relative">
             <button @click="profileDropdown = !profileDropdown" @click.outside="profileDropdown = false" class="flex items-center gap-2 focus:outline-none">
+                @if(auth()->user()->profile_photo_path)
+                <img src="{{ auth()->user()->profile_photo_url }}"
+                    alt="{{ auth()->user()->name }}"
+                    class="h-8 w-8 rounded-lg object-cover shadow-sm">
+                @else
                 <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">SA</div>
+                @endif
                 <span class="text-sm font-semibold text-gray-700 hidden sm:inline">{{ Auth::user()->name ?? 'Super Admin' }}</span>
             </button>
             <div x-show="profileDropdown" class="absolute right-0 mt-2 w-48 rounded-xl bg-white p-1 shadow-lg ring-1 ring-black/5" x-cloak>

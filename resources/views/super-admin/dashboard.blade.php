@@ -13,9 +13,11 @@
         <button class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-sm font-semibold text-gray-700 rounded-xl hover:bg-gray-50 shadow-sm transition">
             <i class="fa-solid fa-download"></i> Export Report
         </button>
+        <!-- 
         <a href="/super-admin/companies/create" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-sm font-semibold text-white rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-600/10 transition">
             <i class="fa-solid fa-plus"></i> New Company
         </a>
+        -->
     </div>
 </div>
 
@@ -90,7 +92,9 @@
                 <button class="px-3 py-1 text-xs rounded-md bg-white text-gray-700 font-medium shadow-sm">Monthly</button>
             </div>
         </div>
-        <canvas id="revenueChart" height="280"></canvas>
+        <div style="height: 300px;">
+            <canvas id="revenueChart"></canvas>
+        </div>
     </div>
 
     <!-- Companies Growth -->
@@ -98,7 +102,9 @@
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-gray-900">Tenant Growth</h3>
         </div>
-        <canvas id="growthChart" height="280"></canvas>
+        <div style="height: 300px;">
+            <canvas id="growthChart"></canvas>
+        </div>
     </div>
 </div>
 
@@ -106,9 +112,9 @@
 <div class="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6 mb-8">
     <h3 class="text-lg font-bold text-gray-900 mb-4">Control Panel</h3>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <a href="/super-admin/companies/create" class="p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition text-center group">
-            <i class="fa-solid fa-plus-circle text-indigo-600 text-xl mb-1 block group-hover:scale-110 transition-transform"></i>
-            <span class="text-sm font-medium text-gray-700">Add Company</span>
+        <a href="/super-admin/companies" class="p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition text-center group">
+            <i class="fa-solid fa-building text-emerald-600 text-xl mb-1 block group-hover:scale-110 transition-transform"></i>
+            <span class="text-sm font-medium text-gray-700">View Companies</span>
         </a>
         <a href="/super-admin/subscriptions" class="p-4 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition text-center group">
             <i class="fa-solid fa-crown text-emerald-600 text-xl mb-1 block group-hover:scale-110 transition-transform"></i>
@@ -250,24 +256,26 @@
 @endsection
 
 @push('scripts')
+<script>
+    window.chartData = {
+        labels: @json($chartLabels ?? []),
+        revenue: @json($chartData ?? []),
+        growth: @json($growthData ?? [])
+    };
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Revenue Chart
         var revCanvas = document.getElementById('revenueChart');
         if (revCanvas) {
-            var ctx = revCanvas.getContext('2d');
-            new Chart(ctx, {
+            new Chart(revCanvas, {
                 type: 'line',
                 data: {
-                    labels: {
-                        !!json_encode($chartLabels ?? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']) !!
-                    },
+                    labels: window.chartData.labels,
                     datasets: [{
                         label: 'Revenue',
-                        data: {
-                            !!json_encode($chartData ?? [0, 0, 0, 0, 0, 0]) !!
-                        },
+                        data: window.chartData.revenue,
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99,102,241,0.05)',
                         tension: 0.4,
@@ -308,18 +316,13 @@
         // Growth Chart
         var growCanvas = document.getElementById('growthChart');
         if (growCanvas) {
-            var ctx2 = growCanvas.getContext('2d');
-            new Chart(ctx2, {
+            new Chart(growCanvas, {
                 type: 'bar',
                 data: {
-                    labels: {
-                        !!json_encode($chartLabels ?? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']) !!
-                    },
+                    labels: window.chartData.labels,
                     datasets: [{
                         label: 'New Companies',
-                        data: {
-                            !!json_encode($growthData ?? [8, 12, 15, 10, 18, 22]) !!
-                        },
+                        data: window.chartData.growth,
                         backgroundColor: '#a5b4fc',
                         borderRadius: 8,
                         borderSkipped: false

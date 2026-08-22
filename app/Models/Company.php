@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\User;
 
 class Company extends Model
 {
@@ -42,7 +43,8 @@ class Company extends Model
         'default_payment_terms',
         'invoice_prefix',
         'quote_prefix',
-        'show_hsn_sac'
+        'show_hsn_sac',
+        'is_active',
     ];
 
     protected $casts = [
@@ -51,6 +53,7 @@ class Company extends Model
         'gst_settings' => 'array',
         'invoice_preferences' => 'array',
         'gst_mode_default' => 'string',
+        'is_active' => 'boolean',
     ];
 
     public function getGstModeAttribute(): string
@@ -91,7 +94,9 @@ class Company extends Model
 
     public function owner()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->hasOne(User::class)->whereHas('roles', function ($q) {
+            $q->where('name', 'owner');
+        });
     }
 
     public function getDefaultGstRatesAttribute(): array

@@ -548,6 +548,10 @@
         .sidebar-overlay.show {
             display: block;
         }
+
+        .submenu-hidden {
+            display: none;
+        }
     </style>
 
     @stack('styles')
@@ -586,9 +590,18 @@
             <a href="{{ route('products.index') }}" class="nav-item {{ request()->routeIs('products.*') ? 'active' : '' }}">
                 <i class="fas fa-box"></i> Products
             </a>
-            <a href="{{ route('reports.gstr1') }}" class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+            <a href="javascript:void(0)" onclick="toggleReports()" class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" style="cursor:pointer;">
                 <i class="fas fa-chart-bar"></i> Reports
+                <i class="fas fa-chevron-down ms-auto" style="font-size:12px;"></i>
             </a>
+            <div id="reportsSubmenu" class="{{ request()->routeIs('reports.*') ? '' : 'submenu-hidden' }}">
+                <a href="{{ route('reports.gstr1') }}" class="nav-item {{ request()->routeIs('reports.gstr1') ? 'active' : '' }}" style="padding-left:40px;">
+                    <i class="fas fa-file-invoice"></i> GSTR-1
+                </a>
+                <a href="{{ route('reports.outstanding') }}" class="nav-item {{ request()->routeIs('reports.outstanding') ? 'active' : '' }}" style="padding-left:40px;">
+                    <i class="fas fa-clock"></i> Outstanding
+                </a>
+            </div>
             @if(auth()->user()->isOwner())
             <a href="{{ route('company.settings') }}" class="nav-item {{ request()->routeIs('company.*') ? 'active' : '' }}">
                 <i class="fas fa-cog"></i> Settings
@@ -603,8 +616,15 @@
         </nav>
 
         <div class="sidebar-footer">
-            <img src="{{ Auth::user()->profile_photo_url ?? 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&background=3b82f6&color=fff' }}"
-                class="avatar-sm" alt="">
+            @if(auth()->user()->profile_photo_path)
+            <img src="{{ auth()->user()->profile_photo_url }}"
+                alt="{{ auth()->user()->name }}"
+                class="avatar-sm">
+            @else
+            <div class="avatar-sm bg-indigo-600 d-flex align-items-center justify-content-center text-white font-bold">
+                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+            </div>
+            @endif
             <div class="user-info">
                 <div class="name">{{ Auth::user()->name }}</div>
                 <div class="email">{{ Auth::user()->email }}</div>
@@ -644,6 +664,11 @@
                 if (window.innerWidth <= 1024) toggleSidebar();
             });
         });
+
+        function toggleReports() {
+            var el = document.getElementById('reportsSubmenu');
+            el.classList.toggle('submenu-hidden');
+        }
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

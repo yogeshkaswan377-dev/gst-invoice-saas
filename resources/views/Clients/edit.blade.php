@@ -246,4 +246,24 @@
         </button>
     </div>
 </form>
+
+{{-- Delete Card (outside update form) --}}
+@can('delete', $client)
+<div class="card border-danger rounded-4 mt-4">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+        <p style="font-size:12px; color:#64748b;">Delete this client permanently.</p>
+        <form action="{{ route('clients.destroy', $client) }}" method="POST"
+            onsubmit="return confirm('Are you sure you want to delete this client?');">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn btn-outline-danger w-100" style="border-radius:10px;">
+                <i class="fas fa-trash me-2"></i> Delete Client
+            </button>
+        </form>
+    </div>
+</div>
+@endcan
+</div> {{-- end col-lg-4 --}}
+</div> {{-- end row --}}
+
 @endsection

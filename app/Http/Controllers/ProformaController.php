@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\InvoiceMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Services\AuditService;
 
 class ProformaController extends Controller
 {
@@ -97,7 +98,7 @@ class ProformaController extends Controller
         );
 
         $invoice = $this->invoiceService->createProforma($invoiceData);
-
+        AuditService::log('created', Invoice::class, $invoice->id, 'Proforma created');
         return redirect()
             ->route('proformas.show', $invoice->id)
             ->with('success', 'Proforma invoice #' . $invoice->invoice_number . ' created successfully!');
@@ -189,7 +190,7 @@ class ProformaController extends Controller
         );
 
         $this->invoiceService->updateProforma($id, $invoiceData);
-
+        AuditService::log('updated', Invoice::class, $id, 'Proforma updated');
         return redirect()
             ->route('proformas.show', $id)
             ->with('success', 'Proforma invoice updated successfully!');
@@ -215,6 +216,7 @@ class ProformaController extends Controller
             'company_id' => $companyId,
         ]);
 
+        AuditService::log('deleted', Invoice::class, $id, 'Proforma deleted');
         $this->invoiceService->deleteProforma($id);
 
         Gate::authorize('delete', $invoice);
@@ -266,7 +268,7 @@ class ProformaController extends Controller
             'sent_to' => $invoice->client->email,
             'user_id' => Auth::id(),
         ]);
-
+        AuditService::log('sent', Invoice::class, $invoice->id, 'Proforma email sent');
         return back()->with('success', 'Invoice emailed successfully!');
     }
 }

@@ -260,6 +260,8 @@ Route::middleware(['auth', 'verified', 'super.admin'])->prefix('super-admin')->n
     // Users
     Route::get('/users', [\App\Http\Controllers\SuperAdmin\UserController::class, 'index'])->name('users');
     Route::get('/users/{user}', [\App\Http\Controllers\SuperAdmin\UserController::class, 'show'])->name('users.show');
+    Route::post('/users/{user}/suspend', [\App\Http\Controllers\SuperAdmin\UserController::class, 'suspend'])->name('users.suspend');
+    Route::post('/users/{user}/approve', [\App\Http\Controllers\SuperAdmin\UserController::class, 'approve'])->name('users.approve');
 
     // Invoices
     Route::get('/invoices', [\App\Http\Controllers\SuperAdmin\InvoiceController::class, 'index'])->name('invoices');
@@ -283,6 +285,7 @@ Route::middleware(['auth', 'verified', 'super.admin'])->prefix('super-admin')->n
 
     // Profile
     Route::get('/profile', [\App\Http\Controllers\SuperAdmin\ProfileController::class, 'index'])->name('profile');
+    Route::patch('/profile', [\App\Http\Controllers\SuperAdmin\ProfileController::class, 'update'])->name('profile.update');
 
     // Company Users
     Route::get('/companies/{company}/users', [\App\Http\Controllers\SuperAdmin\CompanyController::class, 'users'])->name('companies.users');

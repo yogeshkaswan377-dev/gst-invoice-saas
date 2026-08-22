@@ -4,6 +4,22 @@
 @section('meta_description', 'Update your profile information, password and account settings.')
 
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
+@if (session('status') === 'profile-updated')
+<div class="alert alert-success">
+    Profile updated successfully!
+</div>
+@endif
+
 <div class="mb-4">
     <h2 style="font-size:18px; font-weight:700; margin:0;">My Profile</h2>
     <p style="color:#64748b; font-size:12px; margin:4px 0 0;">Manage your account settings</p>
@@ -16,7 +32,7 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-4"><i class="fas fa-user-circle me-2 text-primary"></i>Profile Information</h5>
 
-                <form action="{{ route('profile.update') }}" method="POST">
+                <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data" id="profileForm">
                     @csrf @method('PATCH')
 
                     <div class="row g-3">
@@ -34,7 +50,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">Designation</label>
-                            <input type="text" name="designation" value="{{ old('designation', auth()->user()->designation) }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
+                            <input type="text" name="designation" value="{{ old('designation', auth()->user()->designation) }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" readonly>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">Timezone</label>
@@ -96,8 +112,11 @@
                     style="width:80px; height:80px; border-radius:20px; object-fit:cover; margin-bottom:16px;">
                 <h6 class="fw-bold">{{ auth()->user()->name }}</h6>
                 <p class="text-muted" style="font-size:12px;">{{ auth()->user()->email }}</p>
-                <button class="btn btn-sm" style="background:#f1f5f9; border-radius:10px; font-weight:500;">
-                    <i class="fas fa-camera me-1"></i> Change Photo
+
+                {{-- Use the form attribute to associate inputs outside the main form --}}
+                <input type="file" name="profile_photo" form="profileForm" class="form-control" accept="image/*" style="border-radius:10px; padding:8px;">
+                <button type="submit" form="profileForm" class="btn btn-sm mt-2" style="background:#f1f5f9; border-radius:10px; font-weight:500;">
+                    <i class="fas fa-camera me-1"></i> Upload Photo
                 </button>
             </div>
         </div>
@@ -114,4 +133,4 @@
         </div>
     </div>
 </div>
-@endsection
+@endsection 
