@@ -31,7 +31,8 @@ class CompanyController extends Controller
 
     public function create()
     {
-        return view('company.create');
+        $states = config('indian_states.states');
+        return view('company.create', compact('states'));
     }
 
     public function store(StoreCompanyRequest $request)
@@ -46,6 +47,7 @@ class CompanyController extends Controller
 
             // Update user with company_id
             $user->company_id = $company->id;
+            $user->current_company_id = $company->id;
             $user->save();
 
             // Assign role using Spatie Permission - MUST specify guard_name
@@ -86,6 +88,13 @@ class CompanyController extends Controller
 
     public function settings()
     {
+        $user = auth()->user();
+
+        // Only owners can access company settings
+        if (!$user->isOwner()) {
+            abort(403, 'Only company owners can access settings.');
+        }
+
         $company = Auth::user()->currentCompany;
         return view('company.settings', compact('company'));
     }
@@ -154,5 +163,30 @@ class CompanyController extends Controller
         $this->companyRepository->updateSettings($company->id, $data);
 
         return redirect()->route('company.settings')->with('success', 'Invoice preferences updated.');
+    }
+
+    public function destroy(Request $request, $companyId)
+    {
+        $company = $this->companyRepository->findOrFail($companyId);
+        $user = auth()->user();
+
+        // Only the owner of the company can delete it
+        if (!$user->isOwnerOf($company)) {
+            abort(403);
+        }
+
+        // Delete the company (cascade will remove related data if foreign keys are set)
+        $company->delete();
+
+        // Detach user from company
+        $user->company_id = null;
+        $user->current_company_id = null;
+        $user->save();
+
+        // Clear session
+        session()->forget('current_company_id');
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Company deleted successfully.');
     }
 }

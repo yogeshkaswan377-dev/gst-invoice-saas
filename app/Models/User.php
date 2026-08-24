@@ -94,7 +94,7 @@ class User extends Authenticatable
             ]);
         }
 
-        $companyId = $companyId ?? $this->current_company_id;
+        $companyId = $companyId ?? $this->current_company_id ?? $this->company_id;
 
         // Check if already assigned
         $exists = DB::table('role_user')

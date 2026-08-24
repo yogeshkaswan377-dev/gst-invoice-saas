@@ -10,11 +10,11 @@
         <p style="color:#64748b; font-size:12px; margin:4px 0 0;">Generate tax filing ready summaries</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="{{ route('reports.export.csv', ['type' => 'gstr1', 'from' => request('from'), 'to' => request('to')]) }}"
+        <a href="{{ route('reports.export.csv', ['type' => 'gst_invoice', 'from' => request('from', now()->startOfMonth()->format('Y-m-d')), 'to' => request('to', now()->format('Y-m-d'))]) }}"
             class="btn" style="background:#d1fae5; color:#065f46; border-radius:10px; font-weight:600; font-size:13px;">
             <i class="fas fa-file-csv me-1"></i> Export CSV
         </a>
-        <a href="{{ route('reports.export.excel', ['type' => 'gstr1', 'from' => request('from'), 'to' => request('to')]) }}"
+        <a href="{{ route('reports.export.excel', ['type' => 'gst_invoice', 'from' => request('from', now()->startOfMonth()->format('Y-m-d')), 'to' => request('to', now()->format('Y-m-d'))]) }}"
             class="btn text-white" style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius:10px; font-weight:600; font-size:13px;">
             <i class="fas fa-file-excel me-1"></i> Export Excel
         </a>

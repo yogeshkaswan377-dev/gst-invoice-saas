@@ -136,13 +136,13 @@ class ReportController extends Controller
     public function exportExcel(Request $request)
     {
         $companyId = Auth::user()->current_company_id;
-        $from = $request->from;
-        $to = $request->to;
+        $from = $request->from ?? now()->startOfMonth()->format('Y-m-d');
+        $to = $request->to ?? now()->format('Y-m-d');
         $type = $request->type ?? 'gst_invoice';
 
         $invoices = Invoice::where('company_id', $companyId)
             ->when($type !== 'all', fn($q) => $q->where('invoice_type', $type))
-            ->when($from && $to, fn($q) => $q->whereBetween('invoice_date', [$from, $to]))
+            ->whereBetween('invoice_date', [$from, $to])
             ->with('client')
             ->get();
 

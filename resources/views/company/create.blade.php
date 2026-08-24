@@ -28,6 +28,9 @@
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">GSTIN *</label>
                             <input type="text" name="gstin" value="{{ old('gstin') }}" class="form-control text-uppercase" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" placeholder="22AAAAA0000A1Z5" maxlength="15" required>
+                            @error('gstin')
+                            <span class="text-danger small">{{ $message }}</span>
+                            @enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold" style="font-size:13px;">Email</label>
@@ -45,7 +48,12 @@
                             <input type="text" name="city" value="{{ old('city') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" placeholder="City">
                         </div>
                         <div class="col-md-4">
-                            <input type="text" name="state" value="{{ old('state') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" placeholder="State">
+                            <select name="state_code" class="form-control" required>
+                                <option value="">Select State</option>
+                                @foreach($states ?? [] as $code => $name)
+                                <option value="{{ $code }}" {{ old('state_code') == $code ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <input type="text" name="pincode" value="{{ old('pincode') }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" placeholder="Pincode">

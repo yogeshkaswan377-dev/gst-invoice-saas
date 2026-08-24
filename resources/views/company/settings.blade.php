@@ -217,9 +217,14 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
                 <p style="font-size:12px; color:#64748b;">Delete your company and all associated data. This action cannot be undone.</p>
-                <button class="btn btn-outline-danger w-100" style="border-radius:10px;" onclick="return confirm('Are you absolutely sure?')">
-                    <i class="fas fa-trash me-2"></i> Delete Company
-                </button>
+                <form action="{{ route('company.destroy', auth()->user()->current_company_id) }}" method="POST"
+                    onsubmit="return confirm('Are you absolutely sure? This will delete all company data.');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-outline-danger w-100" style="border-radius:10px;">
+                        <i class="fas fa-trash me-2"></i> Delete Company
+                    </button>
+                </form>
             </div>
         </div>
     </div>

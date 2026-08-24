@@ -21,7 +21,7 @@ class StaffController extends Controller
         $company = auth()->user()->currentCompany;
 
         if (!$company) {
-            return redirect()->route('company.select')
+            return redirect()->route('company.create')
                 ->withErrors(['company' => 'Please select a company first.']);
         }
 

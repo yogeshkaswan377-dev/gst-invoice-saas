@@ -36,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/store', [CompanyController::class, 'store'])->name('store');
         Route::get('/switch', [CompanyController::class, 'switch'])->name('switch');
         Route::get('/switch/{id}', [CompanyController::class, 'switchTo'])->name('switch-to');
+        Route::delete('/{company}', [CompanyController::class, 'destroy'])->name('destroy');
     });
 
     // App Settings

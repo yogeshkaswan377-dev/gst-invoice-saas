@@ -34,6 +34,7 @@ class StoreCompanyRequest extends FormRequest
     {
         return [
             'gstin.size' => 'GSTIN must be exactly 15 characters',
+            'gstin.unique' => 'This GSTIN is already registered with another company.',
             'pan.size' => 'PAN must be exactly 10 characters',
             'pincode.size' => 'Pincode must be exactly 6 digits',
         ];

@@ -48,18 +48,6 @@
                             <label class="form-label fw-semibold" style="font-size:13px;">Phone</label>
                             <input type="text" name="phone" value="{{ old('phone', auth()->user()->phone) }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold" style="font-size:13px;">Designation</label>
-                            <input type="text" name="designation" value="{{ old('designation', auth()->user()->designation) }}" class="form-control" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold" style="font-size:13px;">Timezone</label>
-                            <select name="timezone" class="form-select" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;">
-                                <option value="Asia/Kolkata" {{ (auth()->user()->timezone ?? 'Asia/Kolkata') == 'Asia/Kolkata' ? 'selected' : '' }}>Asia/Kolkata (IST)</option>
-                                <option value="Asia/Dubai">Asia/Dubai</option>
-                                <option value="America/New_York">America/New York</option>
-                            </select>
-                        </div>
                     </div>
 
                     <div class="mt-4">
@@ -126,11 +114,25 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Delete Account</h5>
                 <p style="font-size:12px; color:#64748b;">Permanently delete your account and all associated data.</p>
-                <button class="btn btn-outline-danger w-100" style="border-radius:10px;" onclick="return confirm('Are you sure? This cannot be undone.')">
-                    <i class="fas fa-trash me-2"></i> Delete My Account
-                </button>
+
+                <form method="POST" action="{{ route('profile.destroy') }}" onsubmit="return confirm('Are you sure? This cannot be undone.');">
+                    @csrf
+                    @method('DELETE')
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:13px;">Enter Password to Confirm</label>
+                        <input type="password" name="password" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0; padding:10px 14px;" required>
+                        @error('password', 'userDeletion')
+                        <span class="text-danger small">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <button type="submit" class="btn btn-outline-danger w-100" style="border-radius:10px;">
+                        <i class="fas fa-trash me-2"></i> Delete My Account
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
-@endsection 
+@endsection
