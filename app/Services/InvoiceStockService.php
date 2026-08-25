@@ -36,11 +36,17 @@ class InvoiceStockService
 
             $requiredStock = $this->calculateRequiredStock($product, $item->quantity);
 
-            if ($requiredStock > $product->stock) {
+            if ($product->stock_deduction_type === 'None') {
+                continue; // No stock tracking for this product
+            }
+
+            $availableStock = $product->stock;
+
+            if ($requiredStock > $availableStock) {
                 $errors[] = sprintf(
                     'Insufficient stock for "%s". Available: %s %s, Required: %s %s.',
                     $product->name,
-                    $product->stock,
+                    $availableStock,
                     $product->stock_unit,
                     $requiredStock,
                     $product->stock_unit
@@ -63,6 +69,7 @@ class InvoiceStockService
                 if (!$item->product_id) continue;
 
                 $product = $item->product;
+                if ($product->stock_deduction_type === 'None') continue;
                 $requiredStock = $this->calculateRequiredStock($product, $item->quantity);
 
                 // Save consumed_stock to item (if not already)
@@ -109,6 +116,7 @@ class InvoiceStockService
                 if (!$newItem->product_id) continue;
 
                 $product = Product::find($newItem->product_id);
+                if ($product->stock_deduction_type === 'None') continue;
                 $requiredStock = $this->calculateRequiredStock($product, $newItem->quantity);
 
                 $newItem->update(['consumed_stock' => $requiredStock]);

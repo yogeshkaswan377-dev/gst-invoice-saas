@@ -314,9 +314,9 @@
                         <tbody>
                             @forelse($recentInvoices ?? [] as $invoice)
                             <tr>
-                                <td class="fw-semibold">{{ $invoice->invoice_no }}</td>
+                                <td class="fw-semibold">{{ $invoice->invoice_number }}</td>
                                 <td>{{ $invoice->client->name ?? 'N/A' }}</td>
-                                <td class="fw-semibold">₹{{ number_format($invoice->total) }}</td>
+                                <td class="fw-semibold">₹{{ number_format($invoice->grand_total) }}</td>
                                 <td>
                                     @if($invoice->status == 'paid')
                                     <span class="badge rounded-pill" style="background:#d1fae5; color:#065f46; padding:5px 12px;">Paid</span>
@@ -429,7 +429,7 @@
                 labels: chartLabels.length > 0 ? chartLabels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
                 datasets: [{
                     label: 'Revenue',
-                    data: hasData ? cleanData : [0, 0, 0, 0, 0, 274111],
+                    data: cleanData,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59,130,246,0.08)',
                     tension: 0.4,

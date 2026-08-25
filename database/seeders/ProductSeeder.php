@@ -28,7 +28,7 @@ class ProductSeeder extends Seeder
                 'unit' => 'Mtr',
                 'stock' => 500,
                 'stock_unit' => 'Mtr',
-                'stock_deduction_type' => 'Meter',
+                'stock_deduction_type' => 'None',
                 'consumption_per_piece' => null,
                 'minimum_stock' => 50,
             ],

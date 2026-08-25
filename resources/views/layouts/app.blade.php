@@ -604,7 +604,7 @@
             </div>
             @if(auth()->user()->isOwner())
             <a href="{{ route('company.settings') }}" class="nav-item {{ request()->routeIs('company.*') ? 'active' : '' }}">
-                <i class="fas fa-cog"></i> Settings
+                <i class="fas fa-cog"></i> Company Settings
             </a>
             <a href="{{ route('staff.invite.form') }}" class="nav-item {{ request()->routeIs('staff.invite.*') ? 'active' : '' }}">
                 <i class="fas fa-user-plus"></i> Staff Invite

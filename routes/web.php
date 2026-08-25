@@ -40,26 +40,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // App Settings
-    Route::prefix('settings')->group(function () {
-
-        Route::get('/', [SettingController::class, 'index'])
-            ->name('settings.index');
-
-        Route::post('/update', [SettingController::class, 'update'])
-            ->name('settings.update');
-
-        Route::post('/upload-logo', [SettingController::class, 'uploadLogo'])
-            ->name('settings.upload.logo');
-
-        Route::post('/upload-signature', [SettingController::class, 'uploadSignature'])
-            ->name('settings.upload.signature');
-
-        Route::delete('/logo/remove', [SettingController::class, 'removeMedia'])
-            ->name('settings.logo.remove');
-
-        Route::post('/remove-media', [SettingController::class, 'removeMedia'])
-            ->name('settings.remove.media');
-    });
+    // Redirect old settings to company settings
+    Route::redirect('/settings', '/company/settings');
 
     // Client Management
     Route::prefix('clients')
