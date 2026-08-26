@@ -24,22 +24,14 @@ class ProformaController extends Controller
         private InvoiceService $invoiceService
     ) {}
 
-    /**
-     * Display listing of proforma invoices
-     */
     public function index(Request $request)
     {
         $companyId = Auth::user()->current_company_id;
-
         $filters = $request->only(['status', 'date_from', 'date_to', 'search', 'client_id']);
         $proformas = $this->invoiceService->listProformas($companyId, $filters);
-
         return view('proformas.index', compact('proformas', 'filters'));
     }
 
-    /**
-     * Show create form
-     */
     public function create()
     {
         Gate::authorize('create', Invoice::class);
@@ -52,9 +44,6 @@ class ProformaController extends Controller
         return view('proformas.create', compact('company', 'clients'));
     }
 
-    /**
-     * Store new proforma
-     */
     public function store(StoreProformaRequest $request)
     {
         Gate::authorize('create', Invoice::class);
@@ -62,16 +51,7 @@ class ProformaController extends Controller
         $companyId = Auth::user()->current_company_id;
 
         $items = collect($request->items)->map(function ($item) {
-            return new InvoiceItemData(
-                name: $item['name'],
-                quantity: (int) $item['quantity'],
-                unit_price: (float) $item['unit_price'],
-                description: $item['description'] ?? null,
-                gst_rate: (float) ($item['gst_rate'] ?? 18.00),
-                discount_type: $item['discount_type'] ?? null,
-                discount_value: (float) ($item['discount_value'] ?? 0),
-                taxable_amount: (float) ($item['unit_price'] * $item['quantity']),
-            );
+            return InvoiceItemData::fromArray($item);
         })->toArray();
 
         $invoiceData = new InvoiceData(
@@ -99,14 +79,12 @@ class ProformaController extends Controller
 
         $invoice = $this->invoiceService->createProforma($invoiceData);
         AuditService::log('created', Invoice::class, $invoice->id, 'Proforma created');
+
         return redirect()
             ->route('proformas.show', $invoice->id)
             ->with('success', 'Proforma invoice #' . $invoice->invoice_number . ' created successfully!');
     }
 
-    /**
-     * Show proforma invoice
-     */
     public function show(int $id)
     {
         $companyId = Auth::user()->current_company_id;
@@ -121,9 +99,6 @@ class ProformaController extends Controller
         return view('proformas.show', ['proforma' => $invoice]);
     }
 
-    /**
-     * Edit proforma
-     */
     public function edit(int $id)
     {
         $companyId = Auth::user()->current_company_id;
@@ -140,30 +115,22 @@ class ProformaController extends Controller
 
         Gate::authorize('update', $invoice);
 
-        return view('proformas.edit', compact('invoice', 'company', 'clients'));
+        return view('proformas.edit', [
+            'proforma' => $invoice,
+            'company'  => $company,
+            'clients'  => $clients,
+        ]);
     }
 
-    /**
-     * Update proforma
-     */
     public function update(UpdateProformaRequest $request, int $id)
     {
+        $companyId = Auth::user()->current_company_id;
+
         $invoice = $this->invoiceService->getInvoice($id, $companyId);
         Gate::authorize('update', $invoice);
 
-        $companyId = Auth::user()->current_company_id;
-
         $items = collect($request->items)->map(function ($item) {
-            return new InvoiceItemData(
-                name: $item['name'],
-                quantity: (int) $item['quantity'],
-                unit_price: (float) $item['unit_price'],
-                description: $item['description'] ?? null,
-                gst_rate: (float) ($item['gst_rate'] ?? 18.00),
-                discount_type: $item['discount_type'] ?? null,
-                discount_value: (float) ($item['discount_value'] ?? 0),
-                taxable_amount: (float) ($item['unit_price'] * $item['quantity']),
-            );
+            return InvoiceItemData::fromArray($item);
         })->toArray();
 
         $invoiceData = new InvoiceData(
@@ -191,14 +158,12 @@ class ProformaController extends Controller
 
         $this->invoiceService->updateProforma($id, $invoiceData);
         AuditService::log('updated', Invoice::class, $id, 'Proforma updated');
+
         return redirect()
             ->route('proformas.show', $id)
             ->with('success', 'Proforma invoice updated successfully!');
     }
 
-    /**
-     * Delete proforma
-     */
     public function destroy(int $id)
     {
         $companyId = Auth::user()->current_company_id;
@@ -208,7 +173,6 @@ class ProformaController extends Controller
             return back()->with('error', 'Cannot delete this invoice.');
         }
 
-        // LOG THE DELETION
         Log::warning('Invoice deleted', [
             'user_id' => Auth::id(),
             'invoice_number' => $invoice->invoice_number,
@@ -224,7 +188,6 @@ class ProformaController extends Controller
         return redirect()->route('proformas.index')
             ->with('success', 'Proforma invoice deleted.');
     }
-
 
     public function convertToGst(int $id)
     {

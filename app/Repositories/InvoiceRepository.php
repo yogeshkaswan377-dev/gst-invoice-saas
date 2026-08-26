@@ -66,7 +66,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
     {
         return $this->model->where('id', $id)
             ->where('company_id', $companyId)
-            ->with(['client', 'items', 'payments', 'createdBy'])
+            ->with(['client', 'items', 'createdBy'])
             ->first();
     }
 
@@ -74,7 +74,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
     {
         return $this->model->where('invoice_number', $invoiceNumber)
             ->where('company_id', $companyId)
-            ->with(['client', 'items', 'payments'])
+            ->with(['client', 'items', 'createdBy'])
             ->first();
     }
 

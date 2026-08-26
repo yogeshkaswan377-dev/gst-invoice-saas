@@ -3,6 +3,15 @@
 @section('title', 'Edit Invoice - GST Billing Pro')
 
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="d-flex align-items-center gap-3 mb-4">
     <a href="{{ route('gst-invoices.show', $invoice) }}" class="btn btn-sm" style="background:#f1f5f9; border-radius:10px; color:#64748b;">
         <i class="fas fa-arrow-left"></i>

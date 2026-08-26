@@ -106,32 +106,44 @@ class InvoiceService
      */
     public function calculateTotals(InvoiceData $data): InvoiceTotals
     {
-        // Calculate subtotal from items
         $subtotal = 0;
         foreach ($data->items as $item) {
             $subtotal += $item->unit_price * $item->quantity;
         }
 
-        // Apply discount
-        $discountAmount = $data->discount_amount ?? 0;
-        if ($data->discount_type === 'percentage') {
-            $discountAmount = $subtotal * ($discountAmount / 100);
-        }
-
+        $discountAmount = 0;
         if ($data->discount_type === 'fixed') {
-            $subtotal = $subtotal - ($data->discount_amount ?? 0);
+            $discountAmount = $data->discount_amount ?? 0;
+        } elseif ($data->discount_type === 'percentage') {
+            $discountAmount = $subtotal * (($data->discount_amount ?? 0) / 100);
         }
+        $afterDiscount = $subtotal - $discountAmount;
 
-        // Calculate tax
-        return $this->taxBreakdownService->calculateInvoiceTax(
-            subtotal: $subtotal,
-            discountPercentage: 0,
+        // Let TaxBreakdownService calculate tax on the discounted amount
+        $totals = $this->taxBreakdownService->calculateInvoiceTax(
+            subtotal: $afterDiscount,          // pass discounted subtotal
+            discountPercentage: 0,             // no additional discount
             mode: $data->gst_mode ?? 'exclusive',
             sellerState: Company::find($data->company_id)->state_code ?? '24',
             buyerState: Client::find($data->client_id)->state_code ?? '24',
             gstRate: $data->gst_rate ?? 18.00,
             shippingCharges: $data->shipping_charges ?? 0,
-            commission: $data->commission ?? 0
+            commission: $data->commission ?? 0,
+        );
+
+        // Override subtotal and discountAmount in returned InvoiceTotals
+        return new InvoiceTotals(
+            subtotal: $subtotal,
+            discountAmount: $discountAmount,
+            taxableAmount: $afterDiscount,
+            totalGst: $totals->totalGst,
+            cgstAmount: $totals->cgstAmount,
+            sgstAmount: $totals->sgstAmount,
+            igstAmount: $totals->igstAmount,
+            grandTotal: $afterDiscount + $totals->totalGst + ($data->shipping_charges ?? 0) + ($data->commission ?? 0),
+            taxBreakdown: $totals->taxBreakdown,
+            shippingCharges: $totals->shippingCharges,
+            commission: $totals->commission,
         );
     }
 

@@ -35,9 +35,27 @@
                             <td>{{ $proforma->invoice_date?->format('d M Y') }}</td>
                             <td class="fw-bold">₹{{ number_format($proforma->grand_total ?? 0) }}</td>
                             <td>
-                                <a href="{{ route('proformas.show', $proforma) }}" class="btn btn-sm" style="background:#dbeafe; color:#1d4ed8; border-radius:8px; font-size:11px;">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                                <div class="d-flex gap-1">
+                                    <a href="{{ route('proformas.show', $proforma) }}" class="btn btn-sm" style="background:#dbeafe; color:#1d4ed8; border-radius:8px; font-size:11px;">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+
+                                    @can('update', $proforma)
+                                    <a href="{{ route('proformas.edit', $proforma) }}" class="btn btn-sm" style="background:#fef3c7; color:#92400e; border-radius:8px; font-size:11px;">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    @endcan
+
+                                    @can('delete', $proforma)
+                                    <form action="{{ route('proformas.destroy', $proforma) }}" method="POST" onsubmit="return confirm('Delete this proforma?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm" style="background:#fee2e2; color:#991b1b; border-radius:8px; font-size:11px;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    @endcan
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -50,4 +68,4 @@
             </div>
         </div>
     </div>
-    @endsection 
+    @endsection

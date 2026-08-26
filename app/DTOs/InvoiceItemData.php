@@ -17,7 +17,7 @@ class InvoiceItemData
         public readonly float $discount_amount = 0,
         public readonly float $gst_rate = 18.00,
         public readonly float $taxable_amount = 0,
-        public readonly ?int $productId = null, 
+        public readonly ?int $productId = null,
         public readonly float $cgst_amount = 0,
         public readonly float $sgst_amount = 0,
         public readonly float $igst_amount = 0,
@@ -50,5 +50,31 @@ class InvoiceItemData
             'product_id' => $this->product_id,
             'sort_order' => $this->sort_order,
         ];
+    }
+
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            name: $data['name'] ?? '',
+            quantity: (int) ($data['quantity'] ?? 1),
+            unit_price: (float) ($data['unit_price'] ?? 0),
+            description: $data['description'] ?? null,
+            hsn_sac_code: $data['hsn_sac_code'] ?? null,
+            unit: $data['unit'] ?? 'nos',
+            original_unit_price: isset($data['original_unit_price']) ? (float) $data['original_unit_price'] : null,
+            discount_type: $data['discount_type'] ?? null,
+            discount_value: (float) ($data['discount_value'] ?? 0),
+            discount_amount: (float) ($data['discount_amount'] ?? 0),
+            gst_rate: (float) ($data['gst_rate'] ?? 18.00),
+            taxable_amount: (float) ($data['taxable_amount'] ?? 0),
+            productId: isset($data['productId']) ? (int) $data['productId'] : null,
+            cgst_amount: (float) ($data['cgst_amount'] ?? 0),
+            sgst_amount: (float) ($data['sgst_amount'] ?? 0),
+            igst_amount: (float) ($data['igst_amount'] ?? 0),
+            line_total: (float) ($data['line_total'] ?? 0),
+            line_total_with_gst: (float) ($data['line_total_with_gst'] ?? 0),
+            product_id: isset($data['product_id']) ? (int) $data['product_id'] : null,
+            sort_order: (int) ($data['sort_order'] ?? 0),
+        );
     }
 }

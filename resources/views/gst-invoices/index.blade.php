@@ -4,6 +4,15 @@
 @section('meta_description', 'View, search and manage all your GST invoices. Filter by status, date, and client.')
 
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
     <div>
         <h2 style="font-size:18px; font-weight:700; margin:0;">GST Invoices</h2>

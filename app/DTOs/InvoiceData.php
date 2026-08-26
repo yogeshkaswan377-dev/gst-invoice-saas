@@ -10,6 +10,7 @@ class InvoiceData
         public readonly int $created_by,
         public readonly string $invoice_type,
         public readonly string $gst_mode,
+        public readonly float $gst_rate = 18.00,
         public readonly string $invoice_date,
         public readonly string $due_date,
         public readonly ?string $reference_number = null,

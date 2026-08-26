@@ -3,6 +3,15 @@
 @section('title', 'Create Proforma - GST Billing Pro')
 
 @section('content')
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="d-flex align-items-center gap-3 mb-4">
     <a href="{{ route('proformas.index') }}" class="btn btn-sm" style="background:#f1f5f9; border-radius:10px; color:#64748b;">
         <i class="fas fa-arrow-left"></i>
@@ -18,6 +27,7 @@
                 <h5 class="fw-bold mb-4">Client & Details</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
+                        <input type="hidden" name="client_mode" value="select">
                         <label class="form-label fw-semibold" style="font-size:13px;">Client *</label>
                         <select name="client_id" class="form-select" style="border-radius:12px; border:1px solid #e2e8f0; padding:10px 14px;" required>
                             <option value="">Select Client</option>
@@ -43,8 +53,8 @@
                 <div id="proforma-items">
                     <div class="row g-2 mb-2">
                         <div class="col-md-6"><input type="text" name="items[0][name]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Item"></div>
-                        <div class="col-md-2"><input type="number" name="items[0][qty]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Qty" value="1"></div>
-                        <div class="col-md-2"><input type="number" name="items[0][rate]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Rate"></div>
+                        <div class="col-md-2"><input type="number" name="items[0][quantity]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Qty" value="1"></div>
+                        <div class="col-md-2"><input type="number" name="items[0][unit_price]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Rate"></div>
                         <div class="col-md-2"><input type="number" name="items[0][gst_rate]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="GST %" value="18"></div>
                     </div>
                 </div>
@@ -69,9 +79,9 @@
         const row = document.createElement('div');
         row.className = 'row g-2 mb-2';
         row.innerHTML = `<div class="col-md-6"><input type="text" name="items[${pIndex}][name]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Item"></div>
-        <div class="col-md-2"><input type="number" name="items[${pIndex}][qty]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Qty" value="1"></div>
-        <div class="col-md-2"><input type="number" name="items[${pIndex}][rate]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Rate"></div>
-        <div class="col-md-2"><input type="number" name="items[${pIndex}][gst_rate]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="GST %" value="18"></div>`;
+    <div class="col-md-2"><input type="number" name="items[${pIndex}][quantity]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Qty" value="1"></div>
+    <div class="col-md-2"><input type="number" name="items[${pIndex}][unit_price]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="Rate"></div>
+    <div class="col-md-2"><input type="number" name="items[${pIndex}][gst_rate]" class="form-control" style="border-radius:10px; border:1px solid #e2e8f0;" placeholder="GST %" value="18"></div>`;
         container.appendChild(row);
         pIndex++;
     }

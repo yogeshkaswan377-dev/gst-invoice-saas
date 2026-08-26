@@ -66,8 +66,9 @@ class ProductController extends Controller
         );
 
         $this->productService->create($data);
-        AuditService::log('created', Product::class, $product->id, 'Product created');
-        return redirect()->route('products.index')->with('success', 'Product created successfully!');
+       
+        return redirect()->route('products.index')
+            ->with('success', 'Product created successfully!');
     }
 
     public function edit(Product $product)

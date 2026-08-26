@@ -124,7 +124,7 @@ class ClientController extends Controller
         $validated['company_id'] = session('current_company_id');
 
         Client::create($validated);
-        AuditService::log('created', Client::class, $client->id, 'Client created');
+        
         return redirect()->route('clients.index')->with('success', 'Client created successfully.');
     }
 
