@@ -10,15 +10,11 @@ use App\Models\User;
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
-    {
-        $this->call([
-            RoleAndPermissionSeeder::class,
-            CompanySeeder::class,
-            UserSeeder::class,
-            ProductSeeder::class,
-            ClientSeeder::class,
-            ProformaSeeder::class,
-            InvoiceSeeder::class,
-        ]);
-    }
+{
+    $this->call([
+        RoleAndPermissionSeeder::class,
+        // UserSeeder will be custom and create only super admin
+        UserSeeder::class,
+    ]);
+}
 }

@@ -4,56 +4,20 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\Company;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Super Admin (no company)
         $superAdmin = User::create([
-            'name' => 'Super Admin',
-            'email' => 'super@example.com',
+            'name' => 'S.M FABEXA',
+            'email' => 'smfabexa@gmail.com',   // ← replace with your email
             'password' => Hash::make('password'),
-            'phone' => '9999999999',
+            'phone' => '7227066977',
+            'company_id' => null,
+            'current_company_id' => null,
         ]);
         $superAdmin->assignRole('super_admin');
-
-        $companies = Company::all();
-
-        foreach ($companies as $company) {
-            $slug = strtolower(str_replace(' ', '', $company->name));
-
-            // Owner
-            $owner = User::create([
-                'name' => 'Owner ' . $company->name,
-                'email' => 'owner@' . $slug . '.com',
-                'password' => Hash::make('password'),
-                'company_id' => $company->id,
-                'current_company_id' => $company->id,
-            ]);
-            $owner->assignRole('owner', $company->id);
-
-            // Admin
-            $admin = User::create([
-                'name' => 'Admin ' . $company->name,
-                'email' => 'admin@' . $slug . '.com',
-                'password' => Hash::make('password'),
-                'company_id' => $company->id,
-                'current_company_id' => $company->id,
-            ]);
-            $admin->assignRole('admin', $company->id);
-
-            // Staff
-            $staff = User::create([
-                'name' => 'Staff ' . $company->name,
-                'email' => 'staff@' . $slug . '.com',
-                'password' => Hash::make('password'),
-                'company_id' => $company->id,
-                'current_company_id' => $company->id,
-            ]);
-            $staff->assignRole('staff', $company->id);
-        }
     }
 }
